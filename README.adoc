@@ -1,0 +1,11 @@
+= Apache Ignite Cluster Manager
+
+This is a cluster manager implementation for Vert.x that uses http://ignite.apache.org/index.html[Apache Ignite].
+
+Vert.x cluster manager is pluggable component. So you can replace default Vert.x cluster manager by this implementation.
+
+Please see the in source asciidoc documentation or the main documentation on the web-site for a full description
+of this component:
+
+* Web-site docs
+* link:src/main/asciidoc/java/index.adoc[in-source docs]
