@@ -20,6 +20,9 @@ package io.vertx.test.core;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
 
+/**
+ * @author Andrey Gura
+ */
 public class IgnitesClusteredAsynchronousLockTest extends ClusteredAsynchronousLockTest {
   @Override
   protected ClusterManager getClusterManager() {

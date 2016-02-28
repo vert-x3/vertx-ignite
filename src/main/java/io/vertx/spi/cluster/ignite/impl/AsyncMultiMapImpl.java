@@ -37,6 +37,8 @@ import java.util.function.UnaryOperator;
 
 /**
  * MultiMap implementation.
+ *
+ * @author Andrey Gura
  */
 public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
 

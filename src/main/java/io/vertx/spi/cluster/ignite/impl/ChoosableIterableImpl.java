@@ -25,6 +25,8 @@ import java.util.Objects;
 
 /**
  * ChoosableIterable implementation.
+ *
+ * @author Andrey Gura
  */
 class ChoosableIterableImpl<T> implements ChoosableIterable<T> {
 

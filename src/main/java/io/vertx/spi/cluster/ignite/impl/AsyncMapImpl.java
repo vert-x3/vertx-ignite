@@ -28,6 +28,8 @@ import org.apache.ignite.lang.IgniteFuture;
 
 /**
  * Async wrapper for {@link MapImpl}.
+ *
+ * @author Andrey Gura
  */
 public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
 

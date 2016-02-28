@@ -45,7 +45,7 @@
  *
  * ### Using Vert.x from command line
  *
- * `vertx-ignite-3.2.0.jar` should be in the `lib` directory of the Vert.x installation.
+ * `vertx-ignite-${maven.version}.jar` should be in the `lib` directory of the Vert.x installation.
  *
  * ### Using Vert.x in Maven or Gradle project
  *
@@ -56,9 +56,9 @@
  * [source,xml,subs="+attributes"]
  * ----
  * <dependency>
- *   <groupId>io.vertx</groupId>
- *   <artifactId>vertx-ignite</artifactId>
- *   <version>3.2.0</version>
+ *   <groupId>${maven.groupId}</groupId>
+ *   <artifactId>${maven.artifactId}</artifactId>
+ *   <version>${maven.version}</version>
  * </dependency>
  * ----
  *
@@ -66,7 +66,7 @@
  *
  * [source,groovy,subs="+attributes"]
  * ----
- * compile 'io.vertx:vertx-ignite:3.2.0'
+ * compile '${maven.groupId}:${maven.artifactId}:${maven.version}'
  * ----
  *
  * ### Programmatically specifying cluster manager

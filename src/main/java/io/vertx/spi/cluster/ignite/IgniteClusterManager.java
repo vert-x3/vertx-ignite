@@ -58,6 +58,8 @@ import static org.apache.ignite.events.EventType.*;
 
 /**
  * Apache Ignite based cluster manager.
+ *
+ * @author Andrey Gura
  */
 public class IgniteClusterManager implements ClusterManager {
 

@@ -29,6 +29,8 @@ import java.util.Set;
 
 /**
  * Represents Apache Ignite cache as {@link java.util.Map} interface implementation.
+ *
+ * @author Andrey Gura
  */
 public class MapImpl<K, V> implements Map<K, V> {
 

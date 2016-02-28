@@ -87,6 +87,19 @@
       </bean>
     </property>
 
+    <!-- Allows encryption with SSL and TLS. For more details refer to https://apacheignite.readme.io/docs/ssltls -->
+<!--
+    <property name="sslContextFactory">
+      <bean class="org.apache.ignite.ssl.SslContextFactory">
+        <property name="keyStoreFilePath" value="keystore/server.jks"/>
+        <property name="keyStorePassword" value="123456"/>
+        <property name="trustStoreFilePath" value="keystore/trust.jks"/>
+        <property name="trustStorePassword" value="123456"/>
+        <property name="setProtocol" value="SSL"/>
+      </bean>
+    </property>
+-->
+
     <!-- Template cache configuration. -->
     <property name="cacheConfiguration">
       <bean class="org.apache.ignite.configuration.CacheConfiguration">
