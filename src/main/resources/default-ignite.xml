@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                            http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+  <bean class="org.apache.ignite.configuration.IgniteConfiguration">
+
+    <!-- Explicitly configure TCP discovery SPI to provide list of initial nodes. -->
+    <property name="discoverySpi">
+      <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
+        <property name="ipFinder">
+          <!--
+              Ignite provides several options for automatic discovery that can be used
+              instead os static IP based discovery. For information on all options refer
+              to our documentation: http://apacheignite.readme.io/docs/cluster-config
+          -->
+          <!-- Multicast -->
+          <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder"/>
+
+          <!-- Uncomment static IP finder to enable static-based discovery of initial nodes. -->
+<!--
+          <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder">
+            <property name="addresses">
+              <list>
+                &lt;!&ndash; In distributed environment, replace with actual host IP address. &ndash;&gt;
+                <value>127.0.0.1:47500..47509</value>
+              </list>
+            </property>
+          </bean>
+-->
+
+          <!-- Uncomment S3 IP finder to enable Amazon S3 based discovery. -->
+          <!-- This IP Finder requires ignite-aws module in classpath. -->
+<!--
+          <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.s3.TcpDiscoveryS3IpFinder">
+            <property name="awsCredentials">
+              <bean class="com.amazonaws.auth.BasicAWSCredentials">
+                <constructor-arg value="YOUR_ACCESS_KEY_ID" />
+                <constructor-arg value="YOUR_SECRET_ACCESS_KEY" />
+              </bean>
+            </property>
+            <property name="bucketName" value="YOUR_BUCKET_NAME_IP_FINDER"/>
+          </bean>
+-->
+
+          <!-- Uncomment Google Storage IP finder to enable GCE based discovery. -->
+          <!-- This IP Finder requires ignite-gce module in classpath. -->
+<!--
+          <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.gce.TcpDiscoveryGoogleStorageIpFinder">
+            <property name="projectName" ref="YOUR_GOOGLE_PLATFORM_PROJECT_NAME"/>
+            <property name="bucketName" value="YOUR_BUCKET_NAME"/>
+            <property name="serviceAccountId" value="YOUR_SERVICE_ACCOUNT_ID"/>
+            <property name="serviceAccountP12FilePath" value="PATH_TO_YOUR_PKCS12_KEY"/>
+          </bean>
+-->
+
+          <!-- Uncomment JClouds IP finder to enable generic cloud based discovery. -->
+          <!-- This IP Finder requires ignite-cloud module in classpath. -->
+<!--
+          <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.cloud.TcpDiscoveryCloudIpFinder">
+            <property name="provider" value="google-compute-engine"/>
+            <property name="identity" value="YOUR_SERVICE_ACCOUNT_EMAIL"/>
+            <property name="credentialPath" value="PATH_YOUR_PEM_FILE"/>
+            <property name="zones">
+              <list>
+                <value>us-central1-a</value>
+                <value>asia-east1-a</value>
+              </list>
+            </property>
+          </bean>
+-->
+
+          <!-- Uncomment JDBC IP finder and configure data source to enable JDBC based discovery. -->
+          <!-- This IP Finder requires spring-jdbc and spring-tx modules in classpath. -->
+<!--
+          <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.jdbc.TcpDiscoveryJdbcIpFinder">
+            <property name="dataSource" ref="ds"/>
+          </bean>
+
+          <bean id="ds" class="some.Datasource">
+            ...
+          </bean>
+-->
+        </property>
+      </bean>
+    </property>
+
+    <!-- Allows encryption with SSL and TLS. For more details refer to https://apacheignite.readme.io/docs/ssltls -->
+<!--
+    <property name="sslContextFactory">
+      <bean class="org.apache.ignite.ssl.SslContextFactory">
+        <property name="keyStoreFilePath" value="keystore/server.jks"/>
+        <property name="keyStorePassword" value="123456"/>
+        <property name="trustStoreFilePath" value="keystore/trust.jks"/>
+        <property name="trustStorePassword" value="123456"/>
+        <property name="setProtocol" value="SSL"/>
+      </bean>
+    </property>
+-->
+
+    <!-- Template cache configuration. -->
+    <property name="cacheConfiguration">
+      <bean class="org.apache.ignite.configuration.CacheConfiguration">
+        <property name="name" value="*"/>
+        <property name="cacheMode" value="PARTITIONED"/>
+        <property name="backups" value="1"/>
+      </bean>
+    </property>
+
+    <!-- Logging configuration. -->
+    <property name="gridLogger">
+      <bean class="org.apache.ignite.logger.java.JavaLogger">
+        <constructor-arg type="java.util.logging.Logger">
+          <bean class="java.util.logging.Logger">
+            <constructor-arg type="java.lang.String" value="global"/>
+          </bean>
+        </constructor-arg>
+      </bean>
+    </property>
+
+    <property name="metricsLogFrequency" value="0"/>
+  </bean>
+</beans>
