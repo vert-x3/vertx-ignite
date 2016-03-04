@@ -39,12 +39,12 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
   /**
    * Constructor.
    *
-   * @param map {@link MapImpl} instance.
+   * @param cache {@link IgniteCache} instance.
    * @param vertx {@link Vertx} instance.
    */
   public AsyncMapImpl(IgniteCache<K, V> cache, Vertx vertx) {
+    this.cache = cache.withAsync();
     this.vertx = vertx;
-    this.cache = cache;
   }
 
   @Override
@@ -109,7 +109,6 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
   private <T> void executeWithTimeout(Consumer<IgniteCache<K, V>> cacheOp,
                                       Handler<AsyncResult<T>> handler, long timeout) {
     try {
-      IgniteCache<K, V> cache = this.cache.withAsync();
       cacheOp.accept(cache);
       IgniteFuture<T> future = cache.future();
 
