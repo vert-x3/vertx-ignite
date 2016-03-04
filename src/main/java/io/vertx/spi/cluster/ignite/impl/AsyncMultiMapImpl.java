@@ -45,8 +45,14 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
   private final IgniteCache<K, List<V>> cache;
   private final Vertx vertx;
 
+  /**
+   * Constructor.
+   *
+   * @param cache {@link IgniteCache} instance.
+   * @param vertx {@link Vertx} instance.
+   */
   public AsyncMultiMapImpl(IgniteCache<K, List<V>> cache, Vertx vertx) {
-    this.cache = cache;
+    this.cache = cache.withAsync();
     this.vertx = vertx;
   }
 
@@ -98,7 +104,7 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
   public void removeAllForValue(V value, Handler<AsyncResult<Void>> handler) {
     vertx.executeBlocking(fut -> {
       for (Cache.Entry<K, List<V>> entry : cache) {
-        cache.withAsync().invoke(entry.getKey(), (e, args) -> {
+        cache.invoke(entry.getKey(), (e, args) -> {
           List<V> values = e.getValue();
 
           if (values != null) {
@@ -126,7 +132,6 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
   private <T, R> void execute(Consumer<IgniteCache<K, List<V>>> cacheOp,
                               Function<T, R> mapper, Handler<AsyncResult<R>> handler) {
     try {
-      IgniteCache<K, List<V>> cache = this.cache.withAsync();
       cacheOp.accept(cache);
       IgniteFuture<T> future = cache.future();
       future.listen(fut -> vertx.executeBlocking(f -> f.complete(mapper.apply(future.get())), handler));
