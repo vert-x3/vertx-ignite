@@ -21,19 +21,27 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.VertxException;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ChoosableIterable;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.lang.IgniteFuture;
-
-import javax.cache.Cache;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
+import javax.cache.Cache;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.events.CacheEvent;
+import org.apache.ignite.events.Event;
+import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
+import org.apache.ignite.lang.IgniteFuture;
+import org.apache.ignite.lang.IgnitePredicate;
+
+import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED;
 
 /**
  * MultiMap implementation.
@@ -44,6 +52,7 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
 
   private final IgniteCache<K, List<V>> cache;
   private final Vertx vertx;
+  private final ConcurrentMap<K, ChoosableIterableImpl<V>> subs = new ConcurrentHashMap<>();
 
   /**
    * Constructor.
@@ -52,6 +61,32 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
    * @param vertx {@link Vertx} instance.
    */
   public AsyncMultiMapImpl(IgniteCache<K, List<V>> cache, Vertx vertx) {
+    cache.unwrap(Ignite.class).events().localListen(new IgnitePredicate<Event>() {
+      @Override public boolean apply(Event event) {
+        if (!(event instanceof CacheEvent)) {
+          throw new IllegalArgumentException("Unknown event received: " + event);
+        }
+
+        CacheEvent cacheEvent = (CacheEvent)event;
+
+        if (Objects.equals(cacheEvent.cacheName(), cache.getName()) &&
+            ((IgniteCacheProxy)cache).context().localNodeId().equals(cacheEvent.eventNode().id())) {
+          K key = cacheEvent.key();
+
+          switch (cacheEvent.type()) {
+            case EVT_CACHE_OBJECT_REMOVED:
+              subs.remove(key);
+              break;
+
+            default:
+              throw new IllegalArgumentException("Unknown event received: " + event);
+          }
+        }
+
+        return true;
+      }
+    }, EVT_CACHE_OBJECT_REMOVED);
+
     this.cache = cache.withAsync();
     this.vertx = vertx;
   }
@@ -74,7 +109,18 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
   public void get(K key, Handler<AsyncResult<ChoosableIterable<V>>> handler) {
     execute(
       cache -> cache.get(key),
-      (List<V> list) -> new ChoosableIterableImpl<>(list == null ? Collections.<V>emptyList() : list),
+      (List<V> list) -> {
+        List<V> items = list == null ? Collections.<V>emptyList() : list;
+
+        return subs.compute(key, (k, oldValue) -> {
+          if (oldValue == null) {
+            return new ChoosableIterableImpl<V>(items);
+          } else {
+            oldValue.update(items);
+            return oldValue;
+          }
+        });
+      },
       handler
     );
   }
