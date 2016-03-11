@@ -18,6 +18,7 @@
 package io.vertx.spi.cluster.ignite.impl;
 
 import io.vertx.core.spi.cluster.ChoosableIterable;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -30,6 +31,19 @@ import java.util.concurrent.atomic.AtomicReference;
  * @author Andrey Gura
  */
 class ChoosableIterableImpl<T> implements ChoosableIterable<T> {
+  private static final ChoosableIterable<Object> EMPTY = new ChoosableIterable<Object>() {
+    @Override public boolean isEmpty() {
+      return true;
+    }
+
+    @Override public Object choose() {
+      return null;
+    }
+
+    @Override public Iterator<Object> iterator() {
+      return Collections.emptyIterator();
+    }
+  };
 
   private final AtomicReference<List<T>> itemsRef;
   private AtomicInteger chooseCnt = new AtomicInteger();
@@ -61,5 +75,9 @@ class ChoosableIterableImpl<T> implements ChoosableIterable<T> {
     }
 
     return items.get(Math.abs(chooseCnt.getAndIncrement()) % items.size());
+  }
+
+  public static <T> ChoosableIterable<T> empty() {
+    return (ChoosableIterable<T>)EMPTY;
   }
 }

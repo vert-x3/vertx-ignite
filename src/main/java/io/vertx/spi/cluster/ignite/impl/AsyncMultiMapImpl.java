@@ -24,7 +24,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ChoosableIterable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -109,17 +108,22 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
   public void get(K key, Handler<AsyncResult<ChoosableIterable<V>>> handler) {
     execute(
       cache -> cache.get(key),
-      (List<V> list) -> {
-        List<V> items = list == null ? Collections.<V>emptyList() : list;
+      (List<V> items) -> {
+        ChoosableIterableImpl<V> it = subs.compute(key, (k, oldValue) -> {
+          if (items == null || items.isEmpty()) {
+            return null;
+          }
 
-        return subs.compute(key, (k, oldValue) -> {
           if (oldValue == null) {
             return new ChoosableIterableImpl<V>(items);
-          } else {
+          }
+          else {
             oldValue.update(items);
             return oldValue;
           }
         });
+
+        return it == null ? ChoosableIterableImpl.empty() : it;
       },
       handler
     );
