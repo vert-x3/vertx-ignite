@@ -47,6 +47,7 @@ import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.util.typedef.F;
 
 import java.io.InputStream;
+import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -54,7 +55,9 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static org.apache.ignite.events.EventType.*;
+import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
+import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
+import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 
 /**
  * Apache Ignite based cluster manager.
@@ -107,6 +110,17 @@ public class IgniteClusterManager implements ClusterManager {
     this.cfg = cfg;
   }
 
+  /**
+   * Creates cluster manager instance with given Spring XML configuration file.
+   * Use this constructor in order to configure cluster manager programmatically.
+   *
+   * @param configFile {@code URL} path to Spring XML configuration file.
+   */
+  @SuppressWarnings("unused")
+  public IgniteClusterManager(URL configFile) {
+    this.cfg = loadConfiguration(configFile);
+  }
+  
   @Override
   public void setVertx(Vertx vertx) {
     this.vertx = vertx;
@@ -249,6 +263,17 @@ public class IgniteClusterManager implements ClusterManager {
     return active;
   }
 
+  private IgniteConfiguration loadConfiguration (URL config) {
+    try {
+      IgniteConfiguration cfg = F.first(IgnitionEx.loadConfigurations(config).get1());
+      setNodeId(cfg);
+      return cfg;
+    } catch (IgniteCheckedException e) {
+      log.error("Configuration loading error:", e);
+      throw new RuntimeException(e);
+    }
+  }
+  
   private IgniteConfiguration loadConfiguration() {
     ClassLoader ctxClsLoader = Thread.currentThread().getContextClassLoader();
 
@@ -269,15 +294,18 @@ public class IgniteClusterManager implements ClusterManager {
 
     try {
       IgniteConfiguration cfg = F.first(IgnitionEx.loadConfigurations(is).get1());
-      UUID nodeId = UUID.randomUUID();
-      cfg.setNodeId(nodeId);
-      cfg.setGridName(VERTX_NODE_PREFIX + nodeId);
-
+      setNodeId(cfg);
       return cfg;
     } catch (IgniteCheckedException e) {
       log.error("Configuration loading error:", e);
       throw new RuntimeException(e);
     }
+  }
+
+  private void setNodeId(IgniteConfiguration cfg) {
+    UUID nodeId = UUID.randomUUID();
+    cfg.setNodeId(nodeId);
+    cfg.setGridName(VERTX_NODE_PREFIX + nodeId);
   }
 
   private <K, V> IgniteCache<K, V> getCache(String name) {
