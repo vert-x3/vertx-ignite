@@ -2,10 +2,13 @@
 
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:util="http://www.springframework.org/schema/util"
        xsi:schemaLocation="http://www.springframework.org/schema/beans
-                            http://www.springframework.org/schema/beans/spring-beans.xsd">
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/util
+                           http://www.springframework.org/schema/util/spring-util.xsd">
 
-  <bean class="org.apache.ignite.configuration.IgniteConfiguration">
+<bean class="org.apache.ignite.configuration.IgniteConfiguration">
 
     <!-- Explicitly configure TCP discovery SPI to provide list of initial nodes. -->
     <property name="discoverySpi">
@@ -107,6 +110,12 @@
         <property name="cacheMode" value="PARTITIONED"/>
         <property name="backups" value="1"/>
       </bean>
+    </property>
+
+    <property name="includeEventTypes">
+      <list>
+        <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED"/>
+      </list>
     </property>
 
     <!-- Logging configuration. -->

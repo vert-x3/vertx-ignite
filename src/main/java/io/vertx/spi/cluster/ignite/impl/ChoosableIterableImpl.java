@@ -18,10 +18,12 @@
 package io.vertx.spi.cluster.ignite.impl;
 
 import io.vertx.core.spi.cluster.ChoosableIterable;
-
-import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * ChoosableIterable implementation.
@@ -29,33 +31,53 @@ import java.util.Objects;
  * @author Andrey Gura
  */
 class ChoosableIterableImpl<T> implements ChoosableIterable<T> {
+  private static final ChoosableIterable<Object> EMPTY = new ChoosableIterable<Object>() {
+    @Override public boolean isEmpty() {
+      return true;
+    }
 
-  private final Collection<T> col;
-  private Iterator<T> iter;
+    @Override public Object choose() {
+      return null;
+    }
 
-  public ChoosableIterableImpl(Collection<T> col) {
-    this.col = Objects.requireNonNull(col, "col");
+    @Override public Iterator<Object> iterator() {
+      return Collections.emptyIterator();
+    }
+  };
+
+  private final AtomicReference<List<T>> itemsRef;
+  private AtomicInteger chooseCnt = new AtomicInteger();
+
+  public ChoosableIterableImpl(List<T> items) {
+    this.itemsRef = new AtomicReference<>(Objects.requireNonNull(items, "items"));
+  }
+
+  public void update(List<T> items) {
+    itemsRef.set(Objects.requireNonNull(items, "items"));
   }
 
   @Override
   public boolean isEmpty() {
-    return col.isEmpty();
+    return itemsRef.get().isEmpty();
   }
 
   @Override
   public Iterator<T> iterator() {
-    return col.iterator();
+    return itemsRef.get().iterator();
   }
 
   @Override
   public T choose() {
-    if (col.isEmpty())
-      return null;
+    List<T> items = itemsRef.get();
 
-    if (iter == null || !iter.hasNext()) {
-      iter = col.iterator();
+    if (items.isEmpty()) {
+      return null;
     }
 
-    return iter.hasNext() ? iter.next() : null;
+    return items.get(Math.abs(chooseCnt.getAndIncrement()) % items.size());
+  }
+
+  public static <T> ChoosableIterable<T> empty() {
+    return (ChoosableIterable<T>)EMPTY;
   }
 }

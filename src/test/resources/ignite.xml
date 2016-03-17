@@ -2,10 +2,13 @@
 
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:util="http://www.springframework.org/schema/util"
        xsi:schemaLocation="http://www.springframework.org/schema/beans
-                            http://www.springframework.org/schema/beans/spring-beans.xsd">
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/util
+                           http://www.springframework.org/schema/util/spring-util.xsd">
 
-  <bean class="org.apache.ignite.configuration.IgniteConfiguration">
+<bean class="org.apache.ignite.configuration.IgniteConfiguration">
 
     <property name="localHost" value="127.0.0.1"/>
 
@@ -47,6 +50,13 @@
         </bean>
       </list>
     </property>
+
+    <property name="includeEventTypes">
+      <list>
+        <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED"/>
+      </list>
+    </property>
+
 
     <!-- Logging configuration. -->
     <property name="gridLogger">
