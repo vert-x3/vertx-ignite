@@ -97,6 +97,7 @@ public class IgniteClusterManager implements ClusterManager {
    */
   @SuppressWarnings("unused")
   public IgniteClusterManager() {
+    prepareNodeId();
   }
 
   /**
@@ -108,6 +109,7 @@ public class IgniteClusterManager implements ClusterManager {
   @SuppressWarnings("unused")
   public IgniteClusterManager(IgniteConfiguration cfg) {
     this.cfg = cfg;
+    prepareNodeId();
   }
 
   /**
@@ -119,8 +121,10 @@ public class IgniteClusterManager implements ClusterManager {
   @SuppressWarnings("unused")
   public IgniteClusterManager(URL configFile) {
     this.cfg = loadConfiguration(configFile);
+    prepareNodeId();
+    setGridNameIfNotSet();
   }
-  
+
   @Override
   public void setVertx(Vertx vertx) {
     this.vertx = vertx;
@@ -303,9 +307,17 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   private void setNodeId(IgniteConfiguration cfg) {
-    UUID nodeId = UUID.randomUUID();
-    cfg.setNodeId(nodeId);
-    cfg.setGridName(VERTX_NODE_PREFIX + nodeId);
+    cfg.setConsistentId(UUID.fromString(this.nodeID));
+  }
+
+  private void prepareNodeId() {
+    this.nodeID = UUID.randomUUID().toString();
+  }
+
+  private void setGridNameIfNotSet() {
+    if(null == this.cfg.getGridName() || this.cfg.getGridName().isEmpty()) {
+      cfg.setGridName(VERTX_NODE_PREFIX + this.nodeID);
+    }
   }
 
   private <K, V> IgniteCache<K, V> getCache(String name) {
