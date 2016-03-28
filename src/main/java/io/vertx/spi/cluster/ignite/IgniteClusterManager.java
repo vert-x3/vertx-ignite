@@ -83,7 +83,7 @@ public class IgniteClusterManager implements ClusterManager {
   private IgniteConfiguration cfg;
   private Ignite ignite;
 
-  private String nodeID;
+  private String nodeID = UUID.randomUUID().toString();
   private NodeListener nodeListener;
 
   private volatile boolean active;
@@ -108,6 +108,7 @@ public class IgniteClusterManager implements ClusterManager {
   @SuppressWarnings("unused")
   public IgniteClusterManager(IgniteConfiguration cfg) {
     this.cfg = cfg;
+    setNodeID(cfg);
   }
 
   /**
@@ -266,7 +267,7 @@ public class IgniteClusterManager implements ClusterManager {
   private IgniteConfiguration loadConfiguration(URL config) {
     try {
       IgniteConfiguration cfg = F.first(IgnitionEx.loadConfigurations(config).get1());
-      setNodeId(cfg);
+      setNodeID(cfg);
       return cfg;
     } catch (IgniteCheckedException e) {
       log.error("Configuration loading error:", e);
@@ -294,7 +295,7 @@ public class IgniteClusterManager implements ClusterManager {
 
     try {
       IgniteConfiguration cfg = F.first(IgnitionEx.loadConfigurations(is).get1());
-      setNodeId(cfg);
+      setNodeID(cfg);
       return cfg;
     } catch (IgniteCheckedException e) {
       log.error("Configuration loading error:", e);
@@ -302,10 +303,10 @@ public class IgniteClusterManager implements ClusterManager {
     }
   }
 
-  private void setNodeId(IgniteConfiguration cfg) {
-    UUID nodeId = UUID.randomUUID();
-    cfg.setNodeId(nodeId);
-    cfg.setGridName(VERTX_NODE_PREFIX + nodeId);
+  private void setNodeID(IgniteConfiguration cfg) {
+    UUID uuid = UUID.fromString(nodeID);
+    cfg.setNodeId(uuid);
+    cfg.setGridName(VERTX_NODE_PREFIX + uuid);
   }
 
   private <K, V> IgniteCache<K, V> getCache(String name) {
