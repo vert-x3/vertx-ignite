@@ -97,6 +97,7 @@ public class IgniteClusterManager implements ClusterManager {
    */
   @SuppressWarnings("unused")
   public IgniteClusterManager() {
+    System.setProperty("IGNITE_NO_SHUTDOWN_HOOK", "true");
   }
 
   /**
