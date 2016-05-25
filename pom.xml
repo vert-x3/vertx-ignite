@@ -17,7 +17,7 @@
 
   <properties>
     <stack.version>3.3.0-SNAPSHOT</stack.version>
-    <ignite.version>1.5.0.final</ignite.version>
+    <ignite.version>1.6.0</ignite.version>
 
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
   </properties>
