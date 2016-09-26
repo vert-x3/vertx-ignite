@@ -22,9 +22,10 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.shareddata.AsyncMap;
-import java.util.function.Consumer;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.lang.IgniteFuture;
+
+import java.util.function.Consumer;
 
 /**
  * Async wrapper for {@link MapImpl}.
@@ -59,7 +60,7 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
 
   @Override
   public void put(K key, V value, long timeout, Handler<AsyncResult<Void>> handler) {
-    executeWithTimeout(cache -> cache.put(key, value), handler, timeout);
+    handler.handle(Future.failedFuture(new UnsupportedOperationException()));
   }
 
   @Override
@@ -69,7 +70,7 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
 
   @Override
   public void putIfAbsent(K key, V value, long timeout, Handler<AsyncResult<V>> handler) {
-    executeWithTimeout(cache -> cache.putIfAbsent(key, value), handler, timeout);
+    handler.handle(Future.failedFuture(new UnsupportedOperationException()));
   }
 
   @Override
@@ -103,22 +104,10 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
   }
 
   private <T> void execute(Consumer<IgniteCache<K, V>> cacheOp, Handler<AsyncResult<T>> handler) {
-    executeWithTimeout(cacheOp, handler, -1);
-  }
-
-  private <T> void executeWithTimeout(Consumer<IgniteCache<K, V>> cacheOp,
-                                      Handler<AsyncResult<T>> handler, long timeout) {
     try {
       cacheOp.accept(cache);
       IgniteFuture<T> future = cache.future();
-
-      if (timeout >= 0) {
-        vertx.executeBlocking(f -> future.get(timeout), handler);
-      } else {
-        future.listen(fut -> vertx.executeBlocking(
-            f -> f.complete(future.get()), handler)
-        );
-      }
+      future.listen(fut -> vertx.executeBlocking(f -> f.complete(future.get()), handler));
     } catch (Exception e) {
       handler.handle(Future.failedFuture(e));
     }
