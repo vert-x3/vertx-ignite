@@ -22,7 +22,10 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.shareddata.AsyncMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import javax.cache.expiry.CreatedExpiryPolicy;
+import javax.cache.expiry.Duration;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.lang.IgniteFuture;
 
@@ -58,8 +61,8 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
   }
 
   @Override
-  public void put(K key, V value, long timeout, Handler<AsyncResult<Void>> handler) {
-    executeWithTimeout(cache -> cache.put(key, value), handler, timeout);
+  public void put(K key, V value, long ttl, Handler<AsyncResult<Void>> handler) {
+    executeWithTtl(cache -> cache.put(key, value), handler, ttl);
   }
 
   @Override
@@ -68,8 +71,8 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
   }
 
   @Override
-  public void putIfAbsent(K key, V value, long timeout, Handler<AsyncResult<V>> handler) {
-    executeWithTimeout(cache -> cache.putIfAbsent(key, value), handler, timeout);
+  public void putIfAbsent(K key, V value, long ttl, Handler<AsyncResult<V>> handler) {
+    executeWithTtl(cache -> cache.getAndPutIfAbsent(key, value), handler, ttl);
   }
 
   @Override
@@ -103,22 +106,22 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
   }
 
   private <T> void execute(Consumer<IgniteCache<K, V>> cacheOp, Handler<AsyncResult<T>> handler) {
-    executeWithTimeout(cacheOp, handler, -1);
+    executeWithTtl(cacheOp, handler, -1);
   }
 
-  private <T> void executeWithTimeout(Consumer<IgniteCache<K, V>> cacheOp,
-                                      Handler<AsyncResult<T>> handler, long timeout) {
+  /**
+   * @param ttl Time to live in ms.
+   */
+  private <T> void executeWithTtl(Consumer<IgniteCache<K, V>> cacheOp, Handler<AsyncResult<T>> handler, long ttl) {
     try {
-      cacheOp.accept(cache);
-      IgniteFuture<T> future = cache.future();
+      IgniteCache<K, V> cache0 = ttl > 0 ?
+        cache.withExpiryPolicy(new CreatedExpiryPolicy(new Duration(TimeUnit.MILLISECONDS, ttl))) : cache;
+      cacheOp.accept(cache0);
 
-      if (timeout >= 0) {
-        vertx.executeBlocking(f -> future.get(timeout), handler);
-      } else {
-        future.listen(fut -> vertx.executeBlocking(
-            f -> f.complete(future.get()), handler)
-        );
-      }
+      IgniteFuture<T> future = cache0.future();
+      future.listen(fut -> vertx.executeBlocking(
+        f -> f.complete(future.get()), handler)
+      );
     } catch (Exception e) {
       handler.handle(Future.failedFuture(e));
     }
