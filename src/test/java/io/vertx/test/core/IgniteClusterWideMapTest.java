@@ -20,6 +20,8 @@ package io.vertx.test.core;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
 
+import static org.hamcrest.CoreMatchers.*;
+
 /**
  * @author Andrey Gura
  */
@@ -28,5 +30,27 @@ public class IgniteClusterWideMapTest extends ClusterWideMapTestDifferentNodes {
   @Override
   protected ClusterManager getClusterManager() {
     return new IgniteClusterManager();
+  }
+
+  @Override
+  public void testMapPutTtl() {
+    getVertx().sharedData().getClusterWideMap("unsupported", onSuccess(map -> {
+      map.put("k", "v", 13L, onFailure(cause -> {
+        assertThat(cause, instanceOf(UnsupportedOperationException.class));
+        testComplete();
+      }));
+    }));
+    await();
+  }
+
+  @Override
+  public void testMapPutIfAbsentTtl() {
+    getVertx().sharedData().getClusterWideMap("unsupported", onSuccess(map -> {
+      map.putIfAbsent("k", "v", 13L, onFailure(cause -> {
+        assertThat(cause, instanceOf(UnsupportedOperationException.class));
+        testComplete();
+      }));
+    }));
+    await();
   }
 }
