@@ -36,7 +36,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicLong;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteQueue;
+import org.apache.ignite.IgniteSemaphore;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -122,7 +122,7 @@ public class IgniteClusterManager implements ClusterManager {
   public IgniteClusterManager(URL configFile) {
     this.cfg = loadConfiguration(configFile);
   }
-  
+
   @Override
   public void setVertx(Vertx vertx) {
     this.vertx = vertx;
@@ -155,19 +155,21 @@ public class IgniteClusterManager implements ClusterManager {
   @Override
   public void getLockWithTimeout(String name, long timeout, Handler<AsyncResult<Lock>> handler) {
     vertx.executeBlocking(fut -> {
-      IgniteQueue<Boolean> queue = getQueue(name);
+      IgniteSemaphore semaphore = getSemaphore(name);
 
       boolean locked = false;
       try {
-        locked = queue.offer(true, timeout, TimeUnit.MILLISECONDS);
+        locked = semaphore.tryAcquire(1, timeout, TimeUnit.MILLISECONDS);
       } catch (Exception e) {
-        fut.fail(new VertxException("Error during getting lock " + name, e));
+        fut.fail(new VertxException("Error during getting lock " + name + " on node " + getNodeID(), e));
       }
 
       if (locked) {
+        log.info("SUCCESS getting lock " + name + " on node " + getNodeID());
+
         fut.complete(new LockImpl(name));
       } else {
-        fut.fail(new VertxException("Timed out waiting to get lock " + name));
+        fut.fail(new VertxException("Timed out waiting to get lock " + name + " on node " + getNodeID()));
       }
     }, handler);
   }
@@ -275,7 +277,7 @@ public class IgniteClusterManager implements ClusterManager {
       throw new RuntimeException(e);
     }
   }
-  
+
   private IgniteConfiguration loadConfiguration() {
     ClassLoader ctxClsLoader = Thread.currentThread().getContextClassLoader();
 
@@ -314,8 +316,8 @@ public class IgniteClusterManager implements ClusterManager {
     return ignite.getOrCreateCache(name);
   }
 
-  private <T> IgniteQueue<T> getQueue(String name) {
-    return ignite.queue(name, 1, collectionCfg);
+  private IgniteSemaphore getSemaphore(String name) {
+    return ignite.semaphore(name, 1, true, true);
   }
 
   private static String nodeId(ClusterNode node) {
@@ -331,12 +333,8 @@ public class IgniteClusterManager implements ClusterManager {
 
     @Override
     public void release() {
-      IgniteQueue<Boolean> queue = getQueue(name);
-      Boolean locked = queue.poll();
-
-      if (!locked) {
-        throw new VertxException("Inconsistent lock state " + name);
-      }
+      IgniteSemaphore semaphore = getSemaphore(name);
+      semaphore.release();
     }
   }
 

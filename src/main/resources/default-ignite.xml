@@ -112,6 +112,13 @@
       </bean>
     </property>
 
+    <property name="atomicConfiguration">
+      <bean class="org.apache.ignite.configuration.AtomicConfiguration">
+        <property name="cacheMode" value="PARTITIONED"/>
+        <property name="backups" value="1"/>
+      </bean>
+    </property>
+
     <property name="includeEventTypes">
       <list>
         <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED"/>
