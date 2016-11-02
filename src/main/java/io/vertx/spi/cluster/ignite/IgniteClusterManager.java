@@ -32,6 +32,8 @@ import io.vertx.core.spi.cluster.NodeListener;
 import io.vertx.spi.cluster.ignite.impl.AsyncMapImpl;
 import io.vertx.spi.cluster.ignite.impl.AsyncMultiMapImpl;
 import io.vertx.spi.cluster.ignite.impl.MapImpl;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicLong;
 import org.apache.ignite.IgniteCache;
@@ -43,7 +45,9 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.CollectionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
+import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.util.typedef.F;
 
 import java.io.InputStream;
@@ -91,6 +95,8 @@ public class IgniteClusterManager implements ClusterManager {
   private final Object monitor = new Object();
 
   private CollectionConfiguration collectionCfg;
+
+  private Queue<String> pendingLocks = new ConcurrentLinkedQueue<>();
 
   /**
    * Default constructor. Cluster manager will get configuration from classpath.
@@ -155,13 +161,18 @@ public class IgniteClusterManager implements ClusterManager {
   @Override
   public void getLockWithTimeout(String name, long timeout, Handler<AsyncResult<Lock>> handler) {
     vertx.executeBlocking(fut -> {
-      IgniteQueue<Boolean> queue = getQueue(name);
+      IgniteQueue<String> queue = getQueue(name);
 
       boolean locked = false;
       try {
-        locked = queue.offer(true, timeout, TimeUnit.MILLISECONDS);
+        pendingLocks.add(name);
+
+        locked = queue.offer(nodeId(ignite.cluster().localNode()), timeout, TimeUnit.MILLISECONDS);
       } catch (Exception e) {
         fut.fail(new VertxException("Error during getting lock " + name, e));
+      }
+      finally {
+        pendingLocks.remove(name);
       }
 
       if (locked) {
@@ -216,21 +227,28 @@ public class IgniteClusterManager implements ClusterManager {
               return false;
             }
 
+            String nodeId = nodeId(((DiscoveryEvent)event).eventNode());
+
             if (nodeListener != null) {
               vertx.executeBlocking(f -> {
                 if (isActive()) {
                   switch (event.type()) {
                     case EVT_NODE_JOINED:
-                      nodeListener.nodeAdded(nodeId(((DiscoveryEvent) event).eventNode()));
+                      nodeListener.nodeAdded(nodeId);
                       break;
                     case EVT_NODE_LEFT:
                     case EVT_NODE_FAILED:
-                      nodeListener.nodeLeft(nodeId(((DiscoveryEvent) event).eventNode()));
+                      nodeListener.nodeLeft(nodeId);
                       break;
                   }
                 }
                 fut.complete();
               }, null);
+            }
+
+            if (!pendingLocks.isEmpty() && active &&
+                (event.type() == EVT_NODE_LEFT || event.type() == EVT_NODE_FAILED)) {
+              cleanExpiredLock(nodeId);
             }
 
             return true;
@@ -320,6 +338,16 @@ public class IgniteClusterManager implements ClusterManager {
 
   private static String nodeId(ClusterNode node) {
     return node.id().toString();
+  }
+
+  private void cleanExpiredLock(String nodeId) {
+    try {
+      ((IgniteKernal)ignite).context().io().pool(GridIoPolicy.PUBLIC_POOL)
+          .execute(() -> pendingLocks.forEach(lock -> getQueue(lock).remove(nodeId)));
+    }
+    catch (IgniteCheckedException e) {
+      log.error("Failed to submit ReleaseLock job.", e);
+    }
   }
 
   private class LockImpl implements Lock {
