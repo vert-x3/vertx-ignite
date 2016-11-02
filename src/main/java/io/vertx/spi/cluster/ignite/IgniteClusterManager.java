@@ -32,6 +32,9 @@ import io.vertx.core.spi.cluster.NodeListener;
 import io.vertx.spi.cluster.ignite.impl.AsyncMapImpl;
 import io.vertx.spi.cluster.ignite.impl.AsyncMultiMapImpl;
 import io.vertx.spi.cluster.ignite.impl.MapImpl;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Consumer;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicLong;
 import org.apache.ignite.IgniteCache;
@@ -78,6 +81,8 @@ public class IgniteClusterManager implements ClusterManager {
 
   private static final String VERTX_NODE_PREFIX = "vertx.ignite.node.";
 
+  private final Queue<String> pendingLocks = new ConcurrentLinkedQueue<>();
+
   private Vertx vertx;
 
   private IgniteConfiguration cfg;
@@ -122,7 +127,7 @@ public class IgniteClusterManager implements ClusterManager {
   public IgniteClusterManager(URL configFile) {
     this.cfg = loadConfiguration(configFile);
   }
-  
+
   @Override
   public void setVertx(Vertx vertx) {
     this.vertx = vertx;
@@ -155,13 +160,30 @@ public class IgniteClusterManager implements ClusterManager {
   @Override
   public void getLockWithTimeout(String name, long timeout, Handler<AsyncResult<Lock>> handler) {
     vertx.executeBlocking(fut -> {
-      IgniteQueue<Boolean> queue = getQueue(name);
-
       boolean locked = false;
+
       try {
-        locked = queue.offer(true, timeout, TimeUnit.MILLISECONDS);
+        IgniteQueue<String> queue = getQueue(name, true);
+
+        pendingLocks.offer(name);
+
+        locked = queue.offer(getNodeID(), timeout, TimeUnit.MILLISECONDS);
+
+        if (!locked) {
+          // EVT_NODE_LEFT/EVT_NODE_FAILED event might be already handled, so trying get lock again if
+          // node left topology.
+          // Use IgniteSempahore when it will be fixed.
+          String ownerId = queue.peek();
+          ClusterNode ownerNode = ignite.cluster().forNodeId(UUID.fromString(ownerId)).node();
+          if (ownerNode == null) {
+            queue.remove(ownerId);
+            locked = queue.offer(getNodeID(), timeout, TimeUnit.MILLISECONDS);
+          }
+        }
       } catch (Exception e) {
         fut.fail(new VertxException("Error during getting lock " + name, e));
+      } finally {
+        pendingLocks.remove(name);
       }
 
       if (locked) {
@@ -225,7 +247,9 @@ public class IgniteClusterManager implements ClusterManager {
                       break;
                     case EVT_NODE_LEFT:
                     case EVT_NODE_FAILED:
-                      nodeListener.nodeLeft(nodeId(((DiscoveryEvent) event).eventNode()));
+                      String nodeId = nodeId(((DiscoveryEvent)event).eventNode());
+                      nodeListener.nodeLeft(nodeId);
+                      releasePendingLocksForFailedNode(nodeId);
                       break;
                   }
                 }
@@ -240,6 +264,21 @@ public class IgniteClusterManager implements ClusterManager {
         }
       }, handler);
     }
+  }
+
+  /**
+   * @param nodeId ID of node that left topology
+   */
+  private void releasePendingLocksForFailedNode(final String nodeId) {
+    pendingLocks.forEach(new Consumer<String>() {
+      @Override public void accept(String name) {
+        IgniteQueue<String> queue = getQueue(name, false);
+
+        if (queue != null && nodeId.equals(queue.peek())) {
+          queue.remove(nodeId);
+        }
+      }
+    });
   }
 
   @Override
@@ -275,7 +314,7 @@ public class IgniteClusterManager implements ClusterManager {
       throw new RuntimeException(e);
     }
   }
-  
+
   private IgniteConfiguration loadConfiguration() {
     ClassLoader ctxClsLoader = Thread.currentThread().getContextClassLoader();
 
@@ -314,8 +353,8 @@ public class IgniteClusterManager implements ClusterManager {
     return ignite.getOrCreateCache(name);
   }
 
-  private <T> IgniteQueue<T> getQueue(String name) {
-    return ignite.queue(name, 1, collectionCfg);
+  private <T> IgniteQueue<T> getQueue(String name, boolean create) {
+    return ignite.queue(name, 1, create ? collectionCfg : null);
   }
 
   private static String nodeId(ClusterNode node) {
@@ -331,10 +370,10 @@ public class IgniteClusterManager implements ClusterManager {
 
     @Override
     public void release() {
-      IgniteQueue<Boolean> queue = getQueue(name);
-      Boolean locked = queue.poll();
+      IgniteQueue<String> queue = getQueue(name, true);
+      String ownerId = queue.poll();
 
-      if (!locked) {
+      if (ownerId == null) {
         throw new VertxException("Inconsistent lock state " + name);
       }
     }
