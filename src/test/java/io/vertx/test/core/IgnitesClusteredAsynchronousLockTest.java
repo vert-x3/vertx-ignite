@@ -19,6 +19,7 @@ package io.vertx.test.core;
 
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
+import org.junit.Test;
 
 /**
  * @author Andrey Gura
@@ -27,5 +28,17 @@ public class IgnitesClusteredAsynchronousLockTest extends ClusteredAsynchronousL
   @Override
   protected ClusterManager getClusterManager() {
     return new IgniteClusterManager();
+  }
+
+  @Test
+  @Override
+  public void testLockReleasedForClosedNode() throws Exception {
+    super.testLockReleasedForClosedNode();
+  }
+
+  @Test
+  @Override
+  public void testLockReleasedForKilledNode() throws Exception {
+    super.testLockReleasedForKilledNode();
   }
 }
