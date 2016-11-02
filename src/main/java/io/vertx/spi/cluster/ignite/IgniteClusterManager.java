@@ -32,7 +32,9 @@ import io.vertx.core.spi.cluster.NodeListener;
 import io.vertx.spi.cluster.ignite.impl.AsyncMapImpl;
 import io.vertx.spi.cluster.ignite.impl.AsyncMultiMapImpl;
 import io.vertx.spi.cluster.ignite.impl.MapImpl;
+import java.util.HashSet;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 import org.apache.ignite.Ignite;
@@ -270,12 +272,16 @@ public class IgniteClusterManager implements ClusterManager {
    * @param nodeId ID of node that left topology
    */
   private void releasePendingLocksForFailedNode(final String nodeId) {
+    Set<String> processed = new HashSet<>();
+
     pendingLocks.forEach(new Consumer<String>() {
       @Override public void accept(String name) {
-        IgniteQueue<String> queue = getQueue(name, false);
+        if (processed.add(name)) {
+          IgniteQueue<String> queue = getQueue(name, false);
 
-        if (queue != null && nodeId.equals(queue.peek())) {
-          queue.remove(nodeId);
+          if (queue != null && nodeId.equals(queue.peek())) {
+            queue.remove(nodeId);
+          }
         }
       }
     });
