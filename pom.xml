@@ -148,7 +148,7 @@
             <vertxVersion>${project.version}</vertxVersion>
           </systemPropertyVariables>
          <!-- Needs to be small enough to run in a EC2 1.7GB small instance -->
-          <argLine>-Xms512M -Xmx1200M -DIGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE=1000 @{surefireArgLine}</argLine>
+          <argLine>-Xms512M -Xmx1200M -DIGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE=1000 -DIGNITE_UPDATE_NOTIFIER=false @{surefireArgLine}</argLine>
           <forkCount>1</forkCount>
           <reuseForks>true</reuseForks>
         </configuration>
