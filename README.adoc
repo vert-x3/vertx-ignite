@@ -9,5 +9,5 @@ Vert.x cluster manager is pluggable component. So you can replace default Vert.x
 Please see the in source asciidoc documentation or the main documentation on the web-site for a full description
 of this component:
 
-* Web-site docs
+* link:http://vertx.io/docs/vertx-ignite/java/[Web-site docs]
 * link:src/main/asciidoc/java/index.adoc[in-source docs]
