@@ -21,17 +21,10 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.WorkerExecutor;
+import io.vertx.core.impl.ContextInternal;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ChoosableIterable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.UnaryOperator;
-import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.events.CacheEvent;
@@ -40,7 +33,17 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 
-import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED;
+import javax.cache.Cache;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.UnaryOperator;
+
+import static org.apache.ignite.events.EventType.*;
 
 /**
  * MultiMap implementation.
@@ -50,7 +53,7 @@ import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED;
 public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
 
   private final IgniteCache<K, List<V>> cache;
-  private final Vertx vertx;
+  private final WorkerExecutor workerExecutor;
   private final ConcurrentMap<K, ChoosableIterableImpl<V>> subs = new ConcurrentHashMap<>();
 
   /**
@@ -87,7 +90,7 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
     }, EVT_CACHE_OBJECT_REMOVED);
 
     this.cache = cache.withAsync();
-    this.vertx = vertx;
+    this.workerExecutor = ((ContextInternal) vertx.getOrCreateContext()).createWorkerExecutor();
   }
 
   @Override
@@ -152,7 +155,7 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
 
   @Override
   public void removeAllForValue(V value, Handler<AsyncResult<Void>> handler) {
-    vertx.executeBlocking(fut -> {
+    workerExecutor.executeBlocking(fut -> {
       for (Cache.Entry<K, List<V>> entry : cache) {
         cache.invoke(entry.getKey(), (e, args) -> {
           List<V> values = e.getValue();
@@ -184,7 +187,7 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
     try {
       cacheOp.accept(cache);
       IgniteFuture<T> future = cache.future();
-      future.listen(fut -> vertx.executeBlocking(f -> f.complete(mapper.apply(future.get())), handler));
+      future.listen(fut -> workerExecutor.executeBlocking(f -> f.complete(mapper.apply(future.get())), handler));
     } catch (Exception e) {
       handler.handle(Future.failedFuture(e));
     }
