@@ -41,6 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 import static org.apache.ignite.events.EventType.*;
@@ -155,13 +156,18 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
 
   @Override
   public void removeAllForValue(V value, Handler<AsyncResult<Void>> handler) {
+    removeAllMatching(value::equals, handler);
+  }
+
+  @Override
+  public void removeAllMatching(Predicate<V> p, Handler<AsyncResult<Void>> handler) {
     workerExecutor.executeBlocking(fut -> {
       for (Cache.Entry<K, List<V>> entry : cache) {
         cache.invoke(entry.getKey(), (e, args) -> {
           List<V> values = e.getValue();
 
           if (values != null) {
-            values.remove(value);
+            values.removeIf(p);
 
             if (values.isEmpty()) {
               e.remove();
