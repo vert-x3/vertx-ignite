@@ -21,8 +21,8 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.WorkerExecutor;
-import io.vertx.core.impl.ContextInternal;
+import io.vertx.core.impl.TaskQueue;
+import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ChoosableIterable;
 import org.apache.ignite.Ignite;
@@ -54,7 +54,8 @@ import static org.apache.ignite.events.EventType.*;
 public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
 
   private final IgniteCache<K, List<V>> cache;
-  private final WorkerExecutor workerExecutor;
+  private final VertxInternal vertx;
+  private final TaskQueue taskQueue = new TaskQueue();
   private final ConcurrentMap<K, ChoosableIterableImpl<V>> subs = new ConcurrentHashMap<>();
 
   /**
@@ -91,7 +92,7 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
     }, EVT_CACHE_OBJECT_REMOVED);
 
     this.cache = cache.withAsync();
-    this.workerExecutor = ((ContextInternal) vertx.getOrCreateContext()).createWorkerExecutor();
+    this.vertx = (VertxInternal) vertx;
   }
 
   @Override
@@ -161,7 +162,7 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
 
   @Override
   public void removeAllMatching(Predicate<V> p, Handler<AsyncResult<Void>> handler) {
-    workerExecutor.executeBlocking(fut -> {
+    vertx.getOrCreateContext().executeBlocking(fut -> {
       for (Cache.Entry<K, List<V>> entry : cache) {
         cache.invoke(entry.getKey(), (e, args) -> {
           List<V> values = e.getValue();
@@ -181,7 +182,7 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
       }
 
       fut.complete();
-    }, handler);
+    }, taskQueue, handler);
   }
 
   private <R> void execute(Consumer<IgniteCache<K, List<V>>> cacheOp, Handler<AsyncResult<R>> handler) {
@@ -193,7 +194,9 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
     try {
       cacheOp.accept(cache);
       IgniteFuture<T> future = cache.future();
-      future.listen(fut -> workerExecutor.executeBlocking(f -> f.complete(mapper.apply(future.get())), handler));
+      future.listen(fut -> {
+        vertx.getOrCreateContext().executeBlocking(f -> f.complete(mapper.apply(future.get())), taskQueue, handler);
+      });
     } catch (Exception e) {
       handler.handle(Future.failedFuture(e));
     }
