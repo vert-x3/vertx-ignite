@@ -21,6 +21,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.impl.ContextImpl;
 import io.vertx.core.impl.TaskQueue;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
@@ -191,11 +192,12 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
 
   private <T, R> void execute(Consumer<IgniteCache<K, List<V>>> cacheOp,
                               Function<T, R> mapper, Handler<AsyncResult<R>> handler) {
+    ContextImpl ctx = vertx.getOrCreateContext();
     try {
       cacheOp.accept(cache);
       IgniteFuture<T> future = cache.future();
       future.listen(fut -> {
-        vertx.getOrCreateContext().executeBlocking(f -> f.complete(mapper.apply(future.get())), taskQueue, handler);
+        ctx.executeBlocking(f -> f.complete(mapper.apply(future.get())), taskQueue, handler);
       });
     } catch (Exception e) {
       handler.handle(Future.failedFuture(e));
