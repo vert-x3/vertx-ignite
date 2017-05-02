@@ -98,6 +98,8 @@ public class IgniteClusterManager implements ClusterManager {
 
   private CollectionConfiguration collectionCfg;
 
+  private boolean customIgniteCluster;
+  
   /**
    * Default constructor. Cluster manager will get configuration from classpath.
    */
@@ -118,6 +120,20 @@ public class IgniteClusterManager implements ClusterManager {
     setNodeID(cfg);
   }
 
+  /**
+   * Creates cluster manager instance with given Ignite instance.
+   * Use this constructor in order to share ignite cluster created outside IgniteClusterManager.
+   *
+   * @param ignite {@code Ignite} instance.
+   */
+  @SuppressWarnings("unused")
+  public IgniteClusterManager(Ignite ignite) {
+    Objects.requireNonNull(ignite, "The ignite instance cannot be null.");
+    this.ignite = ignite;
+    this.customIgniteCluster = true;
+    this.cfg = ignite.configuration();    
+  }
+  
   /**
    * Creates cluster manager instance with given Spring XML configuration file.
    * Use this constructor in order to configure cluster manager programmatically.
@@ -220,7 +236,9 @@ public class IgniteClusterManager implements ClusterManager {
         if (!active) {
           active = true;
 
-          ignite = cfg == null ? Ignition.start(loadConfiguration()) : Ignition.start(cfg);
+          if (!customIgniteCluster) {
+            ignite = cfg == null ? Ignition.start(loadConfiguration()) : Ignition.start(cfg);
+          }
           nodeID = nodeId(ignite.cluster().localNode());
 
           for (CacheConfiguration cacheCfg : ignite.configuration().getCacheConfiguration()) {
@@ -295,7 +313,9 @@ public class IgniteClusterManager implements ClusterManager {
         if (active) {
           active = false;
           try {
-            ignite.close();
+            // Do not shutdown the cluster if we are not the owner.
+            if(!customIgniteCluster)
+              ignite.close();
           } catch (Exception e) {
             log.error(e);
           }
