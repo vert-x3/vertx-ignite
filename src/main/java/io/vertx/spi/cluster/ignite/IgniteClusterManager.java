@@ -17,36 +17,11 @@
 
 package io.vertx.spi.cluster.ignite;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import io.vertx.core.VertxException;
-import io.vertx.core.impl.ContextImpl;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.core.shareddata.AsyncMap;
-import io.vertx.core.shareddata.Counter;
-import io.vertx.core.shareddata.Lock;
-import io.vertx.core.spi.cluster.AsyncMultiMap;
-import io.vertx.core.spi.cluster.ClusterManager;
-import io.vertx.core.spi.cluster.NodeListener;
-import io.vertx.spi.cluster.ignite.impl.AsyncMapImpl;
-import io.vertx.spi.cluster.ignite.impl.AsyncMultiMapImpl;
-import io.vertx.spi.cluster.ignite.impl.MapImpl;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteAtomicLong;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteQueue;
-import org.apache.ignite.Ignition;
-import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.CollectionConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.events.DiscoveryEvent;
-import org.apache.ignite.internal.IgnitionEx;
-import org.apache.ignite.internal.util.typedef.F;
+import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
+import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
+import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.HashSet;
@@ -61,7 +36,40 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import static org.apache.ignite.events.EventType.*;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteAtomicLong;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteQueue;
+import org.apache.ignite.Ignition;
+import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.CollectionConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.events.DiscoveryEvent;
+import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.internal.util.typedef.F;
+
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxException;
+import io.vertx.core.impl.ContextImpl;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.core.shareddata.AsyncMap;
+import io.vertx.core.shareddata.Counter;
+import io.vertx.core.shareddata.Lock;
+import io.vertx.core.spi.cluster.AsyncMultiMap;
+import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.core.spi.cluster.NodeListener;
+import io.vertx.spi.cluster.ignite.cfg.IgniteConfigurationLoader;
+import io.vertx.spi.cluster.ignite.cfg.VertxLogger;
+import io.vertx.spi.cluster.ignite.impl.AsyncMapImpl;
+import io.vertx.spi.cluster.ignite.impl.AsyncMultiMapImpl;
+import io.vertx.spi.cluster.ignite.impl.IgniteConfigurationLoaderImpl;
+import io.vertx.spi.cluster.ignite.impl.MapImpl;
 
 /**
  * Apache Ignite based cluster manager.
@@ -73,10 +81,12 @@ public class IgniteClusterManager implements ClusterManager {
   private static final Logger log = LoggerFactory.getLogger(IgniteClusterManager.class);
 
   // Default Ignite configuration file
-  private static final String DEFAULT_CONFIG_FILE = "default-ignite.xml";
-
+  private static final String DEFAULT_CONFIG_FILE = "default-ignite.json";
   // User defined Ignite configuration file
-  private static final String CONFIG_FILE = "ignite.xml";
+  private static final String CONFIG_FILE = "ignite.json";
+  
+  // User defined Ignite configuration file
+  private static final String SPRING_CONFIG_FILE = "ignite.xml";
 
   public static final String VERTX_CACHE_TEMPLATE_NAME = "*";
 
@@ -97,12 +107,13 @@ public class IgniteClusterManager implements ClusterManager {
   private final Object monitor = new Object();
 
   private CollectionConfiguration collectionCfg;
+  private IgniteConfigurationLoader igniteConfigurationLoader = new IgniteConfigurationLoaderImpl();
 
   /**
    * Default constructor. Cluster manager will get configuration from classpath.
    */
   @SuppressWarnings("unused")
-  public IgniteClusterManager() {
+  public IgniteClusterManager() { 
     System.setProperty("IGNITE_NO_SHUTDOWN_HOOK", "true");
   }
 
@@ -126,7 +137,11 @@ public class IgniteClusterManager implements ClusterManager {
    */
   @SuppressWarnings("unused")
   public IgniteClusterManager(URL configFile) {
-    this.cfg = loadConfiguration(configFile);
+    String file = configFile.getFile();
+    if(file != null && file.endsWith("xml"))
+      this.cfg = loadSpringConfiguration(configFile);
+    else
+      this.cfg = loadJsonConfiguration(configFile);
   }
 
   @Override
@@ -311,9 +326,10 @@ public class IgniteClusterManager implements ClusterManager {
     return active;
   }
 
-  private IgniteConfiguration loadConfiguration(URL config) {
+  private IgniteConfiguration loadSpringConfiguration(URL config) {
     try {
       IgniteConfiguration cfg = F.first(IgnitionEx.loadConfigurations(config).get1());
+      initConfigurationDefaults(cfg);
       setNodeID(cfg);
       return cfg;
     } catch (IgniteCheckedException e) {
@@ -321,7 +337,19 @@ public class IgniteClusterManager implements ClusterManager {
       throw new RuntimeException(e);
     }
   }
-
+    
+  private IgniteConfiguration loadSpringConfiguration(InputStream is) {
+    try {
+      IgniteConfiguration cfg = F.first(IgnitionEx.loadConfigurations(is).get1());
+      initConfigurationDefaults(cfg);
+      setNodeID(cfg);
+      return cfg;
+    } catch (IgniteCheckedException e) {
+      log.error("Configuration loading error:", e);
+      throw new RuntimeException(e);
+    }
+  }
+  
   private IgniteConfiguration loadConfiguration() {
     ClassLoader ctxClsLoader = Thread.currentThread().getContextClassLoader();
 
@@ -334,19 +362,43 @@ public class IgniteClusterManager implements ClusterManager {
     if (is == null) {
       is = getClass().getClassLoader().getResourceAsStream(CONFIG_FILE);
 
+      if(is == null) {
+        is = getClass().getClassLoader().getResourceAsStream(SPRING_CONFIG_FILE);
+        if(is != null)
+          return loadSpringConfiguration(is);
+      }
+      
       if (is == null) {
         is = getClass().getClassLoader().getResourceAsStream(DEFAULT_CONFIG_FILE);
         log.info("Using default configuration.");
       }
     }
 
+    return loadJsonConfiguration(is);
+  }
+  
+  private IgniteConfiguration loadJsonConfiguration(InputStream is) {
+    IgniteConfiguration cfg = this.igniteConfigurationLoader.fromJson(is);
+    initConfigurationDefaults(cfg);
+    setNodeID(cfg);
+    return cfg;
+  }
+  
+  private IgniteConfiguration loadJsonConfiguration(URL configFile) {
     try {
-      IgniteConfiguration cfg = F.first(IgnitionEx.loadConfigurations(is).get1());
+      IgniteConfiguration cfg = this.igniteConfigurationLoader.fromJson(configFile.openStream());
+      initConfigurationDefaults(cfg);
       setNodeID(cfg);
       return cfg;
-    } catch (IgniteCheckedException e) {
-      log.error("Configuration loading error:", e);
-      throw new RuntimeException(e);
+    } catch (IOException e) {
+      throw new IllegalArgumentException("cannot load cfg from url "+configFile, e);
+    }
+  }
+  
+  private void initConfigurationDefaults(IgniteConfiguration cfg) {
+    if(cfg.getGridLogger() == null) {      
+      IgniteLogger gridLogger = new VertxLogger();
+      cfg.setGridLogger(gridLogger);
     }
   }
 

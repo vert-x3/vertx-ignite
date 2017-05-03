@@ -1,0 +1,18 @@
+{
+	"discoverySpi" : {
+		"@class" : "org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi",
+		"ipFinder" : {
+			"@class" : "org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder"
+		}
+	},
+	"cacheConfiguration" : [{
+		"name" : "*",
+		"cacheMode" : "PARTITIONED",
+        "backups" : 1,
+        "readFromBackup" : false
+	}],
+	"includeEventTypes" : [
+		"EVT_CACHE_OBJECT_REMOVED"
+	],
+	"metricsLogFrequency" : 0
+}

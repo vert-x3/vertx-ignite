@@ -72,17 +72,119 @@ Vertx.clusteredVertx(options, res -> {
 
 == Configuring cluster manager
 
-=== Using configuration file
+=== Using JSON configuration file
 
-The cluster manager is configured by a file `default-ignite.xml` which is packaged inside the jar.
+The cluster manager is configured by a file `default-ignite.json` which is packaged inside the jar.
 
-If you want to override this configuration you can provide `ignite.xml` file on your classpath and this will be
+If you want to override this configuration you can provide `ignite.json` file on your classpath and this will be
 used instead.
 
-The xml file is a Ignite configuration file and is described in details in
+JSON configuration file represent *org.apache.ignite.configuration.IgniteConfiguration* class.
+Refer https://ignite.apache.org/releases/mobile/org/apache/ignite/configuration/IgniteConfiguration.html[Javadoc] for details.
+Please use @class meta property for specify type of inner classes, like DiscoverySpi, TcpDiscoveryIpFinder and so.
+You can use both integer numbers and named constants from *org.apache.ignite.events.EventType* class for includeEventTypes property.
+
+Example:
+[source,json]
+----
+{
+	"localHost" : "127.0.0.1",
+	"discoverySpi" : {
+		"@class" : "org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi",
+		"ipFinder" : {
+			"@class" : "org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder",
+			"addresses" : ["127.0.0.1:47500..47549"]
+		}
+	},
+	"cacheConfiguration" : [{
+		"name" : "*",
+		"cacheMode" : "PARTITIONED",
+        "backups" : 1,
+        "readFromBackup" : false,
+        "startSize" : 15000,
+        "affinity" : {
+        	"@class" : "org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction",
+        	"partitions" : 128
+        }
+	}],
+	"includeEventTypes" : [
+		"EVT_CACHE_OBJECT_REMOVED"
+	],
+	"metricsLogFrequency" : 0
+}
+----
+
+=== Using XML configuration file
+
+To configure Ignite using XML configuration file, you must add ignite-spring dependency to classpath:
+
+* Maven (in your `pom.xml`):
+
+[source,xml,subs="+attributes"]
+----
+ <dependency>
+  <groupId>org.apache.ignite</groupId>
+  <artifactId>ignite-spring</artifactId>
+  <version>3.4.1</version>
+  <exclusions>
+    <exclusion>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-aop</artifactId>
+    </exclusion>
+    <exclusion>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-tx</artifactId>
+    </exclusion>
+    <exclusion>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-jdbc</artifactId>
+    </exclusion>
+  </exclusions>
+ </dependency>
+----
+
+* Gradle (in your `build.gradle` file):
+
+[source,groovy,subs="+attributes"]
+----
+compile 'org.apache.ignite:ignite-spring:3.4.1' {
+	exclude group: 'org.springframework', module: 'spring-aop'
+	exclude group: 'org.springframework', module: 'spring-tx'
+	exclude group: 'org.springframework', module: 'spring-jdbc'
+}
+----
+
+If you want to override default `default-ignite.json` configuration you can provide `ignite.xml` file on your classpath and this will be
+used instead.
+
+The xml file is than a Ignite configuration file and is described in details in
 https://apacheignite.readme.io/docs[Apache Ignite documentation].
 
-### Configuring programmatically
+----
+ClusterManager clusterManager = new IgniteClusterManager("ignite.xml");
+VertxOptions options = new VertxOptions().setClusterManager(clusterManager);
+----
+
+=== Specify configuration file programmatically
+
+You can also specify configuration file programmatically:
+
+[source,java]
+----
+URL url = json or xml configuration URL construction code (omitted)
+ClusterManager clusterManager = new IgniteClusterManager(url);
+
+VertxOptions options = new VertxOptions().setClusterManager(clusterManager);
+Vertx.clusteredVertx(options, res -> {
+  if (res.succeeded()) {
+    Vertx vertx = res.result();
+  } else {
+    // failed!
+  }
+});
+----
+
+=== Configuring programmatically
 
 You can also specify configuration programmatically:
 
