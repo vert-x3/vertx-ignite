@@ -102,6 +102,10 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
       if (values == null)
         values = new ArrayList<>();
 
+      if (values.contains(value)) {
+        return null;
+      }
+
       values.add(value);
       entry.setValue(values);
       return null;
