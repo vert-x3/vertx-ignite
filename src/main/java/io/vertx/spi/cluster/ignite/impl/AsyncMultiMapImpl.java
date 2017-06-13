@@ -99,8 +99,11 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
     execute(cache -> cache.invoke(key, (entry, arguments) -> {
       List<V> values = entry.getValue();
 
-      if (values == null)
+      if (values == null) {
         values = new ArrayList<>();
+      } else if (values.contains(value)) {
+        return null;
+      }
 
       values.add(value);
       entry.setValue(values);
