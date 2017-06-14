@@ -24,6 +24,18 @@ import io.vertx.core.impl.TaskQueue;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ChoosableIterable;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
+import javax.cache.Cache;
+import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.events.CacheEvent;
@@ -32,18 +44,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 
-import javax.cache.Cache;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.UnaryOperator;
-
-import static org.apache.ignite.events.EventType.*;
+import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED;
 
 /**
  * MultiMap implementation.
@@ -52,7 +53,7 @@ import static org.apache.ignite.events.EventType.*;
  */
 public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
 
-  private final IgniteCache<K, List<V>> cache;
+  private final IgniteCache<K, Set<V>> cache;
   private final VertxInternal vertx;
   private final TaskQueue taskQueue = new TaskQueue();
   private final ConcurrentMap<K, ChoosableIterableImpl<V>> subs = new ConcurrentHashMap<>();
@@ -63,31 +64,29 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
    * @param cache {@link IgniteCache} instance.
    * @param vertx {@link Vertx} instance.
    */
-  public AsyncMultiMapImpl(IgniteCache<K, List<V>> cache, Vertx vertx) {
-    cache.unwrap(Ignite.class).events().localListen(new IgnitePredicate<Event>() {
-      @Override public boolean apply(Event event) {
-        if (!(event instanceof CacheEvent)) {
-          throw new IllegalArgumentException("Unknown event received: " + event);
-        }
-
-        CacheEvent cacheEvent = (CacheEvent)event;
-
-        if (Objects.equals(cacheEvent.cacheName(), cache.getName()) &&
-            ((IgniteCacheProxy)cache).context().localNodeId().equals(cacheEvent.eventNode().id())) {
-          K key = cacheEvent.key();
-
-          switch (cacheEvent.type()) {
-            case EVT_CACHE_OBJECT_REMOVED:
-              subs.remove(key);
-              break;
-
-            default:
-              throw new IllegalArgumentException("Unknown event received: " + event);
-          }
-        }
-
-        return true;
+  public AsyncMultiMapImpl(IgniteCache<K, Set<V>> cache, Vertx vertx) {
+    cache.unwrap(Ignite.class).events().localListen((IgnitePredicate<Event>)event -> {
+      if (!(event instanceof CacheEvent)) {
+        throw new IllegalArgumentException("Unknown event received: " + event);
       }
+
+      CacheEvent cacheEvent = (CacheEvent)event;
+
+      if (Objects.equals(cacheEvent.cacheName(), cache.getName()) &&
+          ((IgniteCacheProxy)cache).context().localNodeId().equals(cacheEvent.eventNode().id())) {
+        K key = cacheEvent.key();
+
+        switch (cacheEvent.type()) {
+          case EVT_CACHE_OBJECT_REMOVED:
+            subs.remove(key);
+            break;
+
+          default:
+            throw new IllegalArgumentException("Unknown event received: " + event);
+        }
+      }
+
+      return true;
     }, EVT_CACHE_OBJECT_REMOVED);
 
     this.cache = cache.withAsync();
@@ -97,10 +96,10 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
   @Override
   public void add(K key, V value, Handler<AsyncResult<Void>> handler) {
     execute(cache -> cache.invoke(key, (entry, arguments) -> {
-      List<V> values = entry.getValue();
+      Set<V> values = entry.getValue();
 
       if (values == null)
-        values = new ArrayList<>();
+        values = new HashSet<>();
 
       values.add(value);
       entry.setValue(values);
@@ -112,17 +111,17 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
   public void get(K key, Handler<AsyncResult<ChoosableIterable<V>>> handler) {
     execute(
       cache -> cache.get(key),
-      (List<V> items) -> {
+      (Set<V> items) -> {
         ChoosableIterableImpl<V> it = subs.compute(key, (k, oldValue) -> {
           if (items == null || items.isEmpty()) {
             return null;
           }
 
           if (oldValue == null) {
-            return new ChoosableIterableImpl<V>(items);
+            return new ChoosableIterableImpl<>(new ArrayList<>(items));
           }
           else {
-            oldValue.update(items);
+            oldValue.update(new ArrayList<>(items));
             return oldValue;
           }
         });
@@ -136,7 +135,7 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
   @Override
   public void remove(K key, V value, Handler<AsyncResult<Boolean>> handler) {
     execute(cache -> cache.invoke(key, (entry, arguments) -> {
-      List<V> values = entry.getValue();
+      Set<V> values = entry.getValue();
 
       if (values != null) {
         boolean removed = values.remove(value);
@@ -162,33 +161,52 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
   @Override
   public void removeAllMatching(Predicate<V> p, Handler<AsyncResult<Void>> handler) {
     vertx.getOrCreateContext().executeBlocking(fut -> {
-      for (Cache.Entry<K, List<V>> entry : cache) {
-        cache.invoke(entry.getKey(), (e, args) -> {
-          List<V> values = e.getValue();
+      boolean success = false;
+      Exception err = null;
 
-          if (values != null) {
-            values.removeIf(p);
+      for (int i = 0; i < 5; i++) { // Cache iterator can be broken in case when node left topology. Need repeat.
+        try {
+          for (Cache.Entry<K, Set<V>> entry : cache) {
+            cache.invoke(entry.getKey(), (e, args) -> {
+              Set<V> values = e.getValue();
 
-            if (values.isEmpty()) {
-              e.remove();
-            } else {
-              e.setValue(values);
-            }
+              if (values != null) {
+                values.removeIf(p);
+
+                if (values.isEmpty()) {
+                  e.remove();
+                }
+                else {
+                  e.setValue(values);
+                }
+              }
+
+              return null;
+            });
           }
 
-          return null;
-        });
+          success = true;
+
+          fut.complete();
+
+          break;
+        }
+        catch (CacheException e) {
+          err = e;
+        }
       }
 
-      fut.complete();
+      if (!success) {
+        fut.fail(err);
+      }
     }, taskQueue, handler);
   }
 
-  private <R> void execute(Consumer<IgniteCache<K, List<V>>> cacheOp, Handler<AsyncResult<R>> handler) {
+  private <R> void execute(Consumer<IgniteCache<K, Set<V>>> cacheOp, Handler<AsyncResult<R>> handler) {
     execute(cacheOp, UnaryOperator.identity(), handler);
   }
 
-  private <T, R> void execute(Consumer<IgniteCache<K, List<V>>> cacheOp,
+  private <T, R> void execute(Consumer<IgniteCache<K, Set<V>>> cacheOp,
                               Function<T, R> mapper, Handler<AsyncResult<R>> handler) {
     vertx.getOrCreateContext().executeBlocking(f -> {
       cacheOp.accept(cache);

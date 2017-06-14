@@ -142,7 +142,7 @@ public class IgniteClusterManager implements ClusterManager {
   @Override
   public <K, V> void getAsyncMultiMap(String name, Handler<AsyncResult<AsyncMultiMap<K, V>>> handler) {
     vertx.executeBlocking(
-      fut -> fut.complete(new AsyncMultiMapImpl<>(this.<K, List<V>>getCache(name), vertx)), handler
+      fut -> fut.complete(new AsyncMultiMapImpl<>(this.<K, Set<V>>getCache(name), vertx)), handler
     );
   }
 
