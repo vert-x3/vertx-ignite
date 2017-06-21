@@ -110,6 +110,7 @@
         <property name="cacheMode" value="PARTITIONED"/>
         <property name="backups" value="1"/>
         <property name="readFromBackup" value="false"/>
+        <property name="writeSynchronizationMode" value="FULL_SYNC"/>
       </bean>
     </property>
 

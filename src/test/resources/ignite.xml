@@ -42,12 +42,12 @@
           <property name="cacheMode" value="PARTITIONED"/>
           <property name="backups" value="1"/>
           <property name="readFromBackup" value="false"/>
-          <property name="startSize" value="15000"/>
           <property name="affinity">
             <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">
               <property name="partitions" value="128"/>
             </bean>
           </property>
+          <property name="writeSynchronizationMode" value="FULL_SYNC"/>
         </bean>
       </list>
     </property>

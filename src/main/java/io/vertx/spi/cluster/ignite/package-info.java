@@ -90,6 +90,10 @@
  *
  * == Configuring cluster manager
  *
+ * Note: Starting with version 2.0, Apache Ignite has introduced a new off-heap memory architecture. All caches use
+ * off-heap memory by default. New memory architecture is described in
+ * https://apacheignite.readme.io/docs/page-memory[Ignite Virtual Memory] article.
+ *
  * === Using configuration file
  *
  * The cluster manager is configured by a file `default-ignite.xml` which is packaged inside the jar.

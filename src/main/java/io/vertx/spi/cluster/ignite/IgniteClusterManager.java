@@ -353,7 +353,7 @@ public class IgniteClusterManager implements ClusterManager {
   private void setNodeID(IgniteConfiguration cfg) {
     UUID uuid = UUID.fromString(nodeID);
     cfg.setNodeId(uuid);
-    cfg.setGridName(VERTX_NODE_PREFIX + uuid);
+    cfg.setIgniteInstanceName(VERTX_NODE_PREFIX + uuid);
   }
 
   private <K, V> IgniteCache<K, V> getCache(String name) {
