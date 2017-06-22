@@ -89,13 +89,13 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
       return true;
     }, EVT_CACHE_OBJECT_REMOVED);
 
-    this.cache = cache.withAsync();
+    this.cache = cache;
     this.vertx = (VertxInternal) vertx;
   }
 
   @Override
   public void add(K key, V value, Handler<AsyncResult<Void>> handler) {
-    execute(cache -> cache.invoke(key, (entry, arguments) -> {
+    execute(cache -> cache.invokeAsync(key, (entry, arguments) -> {
       Set<V> values = entry.getValue();
 
       if (values == null)
@@ -110,7 +110,7 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
   @Override
   public void get(K key, Handler<AsyncResult<ChoosableIterable<V>>> handler) {
     execute(
-      cache -> cache.get(key),
+      cache -> cache.getAsync(key),
       (Set<V> items) -> {
         ChoosableIterableImpl<V> it = subs.compute(key, (k, oldValue) -> {
           if (items == null || items.isEmpty()) {
@@ -134,7 +134,7 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
 
   @Override
   public void remove(K key, V value, Handler<AsyncResult<Boolean>> handler) {
-    execute(cache -> cache.invoke(key, (entry, arguments) -> {
+    execute(cache -> cache.invokeAsync(key, (entry, arguments) -> {
       Set<V> values = entry.getValue();
 
       if (values != null) {
@@ -167,7 +167,7 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
       for (int i = 0; i < 5; i++) { // Cache iterator can be broken in case when node left topology. Need repeat.
         try {
           for (Cache.Entry<K, Set<V>> entry : cache) {
-            cache.invoke(entry.getKey(), (e, args) -> {
+            cache.invokeAsync(entry.getKey(), (e, args) -> {
               Set<V> values = e.getValue();
 
               if (values != null) {
@@ -202,15 +202,14 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
     }, taskQueue, handler);
   }
 
-  private <R> void execute(Consumer<IgniteCache<K, Set<V>>> cacheOp, Handler<AsyncResult<R>> handler) {
+  private <T> void execute(Function<IgniteCache<K, Set<V>>, IgniteFuture<T>> cacheOp, Handler<AsyncResult<T>> handler) {
     execute(cacheOp, UnaryOperator.identity(), handler);
   }
 
-  private <T, R> void execute(Consumer<IgniteCache<K, Set<V>>> cacheOp,
+  private <T, R> void execute(Function<IgniteCache<K, Set<V>>, IgniteFuture<T>> cacheOp,
                               Function<T, R> mapper, Handler<AsyncResult<R>> handler) {
     vertx.getOrCreateContext().executeBlocking(f -> {
-      cacheOp.accept(cache);
-      IgniteFuture<T> future = cache.future();
+      IgniteFuture<T> future = cacheOp.apply(cache);
       f.complete(mapper.apply(future.get()));
     }, taskQueue, handler);
   }

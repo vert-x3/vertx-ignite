@@ -23,7 +23,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.shareddata.AsyncMap;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
+import java.util.function.Function;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import org.apache.ignite.IgniteCache;
@@ -46,79 +46,79 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
    * @param vertx {@link Vertx} instance.
    */
   public AsyncMapImpl(IgniteCache<K, V> cache, Vertx vertx) {
-    this.cache = cache.withAsync();
+    this.cache = cache;
     this.vertx = vertx;
   }
 
   @Override
   public void get(K key, Handler<AsyncResult<V>> handler) {
-    execute(cache -> cache.get(key), handler);
+    execute(cache -> cache.getAsync(key), handler);
   }
 
   @Override
   public void put(K key, V value, Handler<AsyncResult<Void>> handler) {
-    execute(cache -> cache.put(key, value), handler);
+    execute(cache -> cache.putAsync(key, value), handler);
   }
 
   @Override
   public void put(K key, V value, long ttl, Handler<AsyncResult<Void>> handler) {
-    executeWithTtl(cache -> cache.put(key, value), handler, ttl);
+    executeWithTtl(cache -> cache.putAsync(key, value), handler, ttl);
   }
 
   @Override
   public void putIfAbsent(K key, V value, Handler<AsyncResult<V>> handler) {
-    execute(cache -> cache.getAndPutIfAbsent(key, value), handler);
+    execute(cache -> cache.getAndPutIfAbsentAsync(key, value), handler);
   }
 
   @Override
   public void putIfAbsent(K key, V value, long ttl, Handler<AsyncResult<V>> handler) {
-    executeWithTtl(cache -> cache.getAndPutIfAbsent(key, value), handler, ttl);
+    executeWithTtl(cache -> cache.getAndPutIfAbsentAsync(key, value), handler, ttl);
   }
 
   @Override
   public void remove(K key, Handler<AsyncResult<V>> handler) {
-    execute(cache -> cache.getAndRemove(key), handler);
+    execute(cache -> cache.getAndRemoveAsync(key), handler);
   }
 
   @Override
   public void removeIfPresent(K key, V value, Handler<AsyncResult<Boolean>> handler) {
-    execute(cache -> cache.remove(key, value), handler);
+    execute(cache -> cache.removeAsync(key, value), handler);
   }
 
   @Override
   public void replace(K key, V value, Handler<AsyncResult<V>> handler) {
-    execute(cache -> cache.getAndReplace(key, value), handler);
+    execute(cache -> cache.getAndReplaceAsync(key, value), handler);
   }
 
   @Override
   public void replaceIfPresent(K key, V oldValue, V newValue, Handler<AsyncResult<Boolean>> handler) {
-    execute(cache -> cache.replace(key, oldValue, newValue), handler);
+    execute(cache -> cache.replaceAsync(key, oldValue, newValue), handler);
   }
 
   @Override
   public void clear(Handler<AsyncResult<Void>> handler) {
-    execute(IgniteCache::clear, handler);
+    execute(IgniteCache::clearAsync, handler);
   }
 
   @Override
   public void size(Handler<AsyncResult<Integer>> handler) {
-    execute(IgniteCache::size, handler);
+    execute(IgniteCache::sizeAsync, handler);
   }
 
-  private <T> void execute(Consumer<IgniteCache<K, V>> cacheOp, Handler<AsyncResult<T>> handler) {
+  private <T> void execute(Function<IgniteCache<K, V>, IgniteFuture<T>> cacheOp, Handler<AsyncResult<T>> handler) {
     executeWithTtl(cacheOp, handler, -1);
   }
 
   /**
    * @param ttl Time to live in ms.
    */
-  private <T> void executeWithTtl(Consumer<IgniteCache<K, V>> cacheOp, Handler<AsyncResult<T>> handler, long ttl) {
+  private <T> void executeWithTtl(Function<IgniteCache<K, V>, IgniteFuture<T>> cacheOp,
+    Handler<AsyncResult<T>> handler, long ttl) {
     try {
       IgniteCache<K, V> cache0 = ttl > 0 ?
         cache.withExpiryPolicy(new CreatedExpiryPolicy(new Duration(TimeUnit.MILLISECONDS, ttl))) : cache;
-      cacheOp.accept(cache0);
 
-      IgniteFuture<T> future = cache0.future();
+      IgniteFuture<T> future = cacheOp.apply(cache0);;
       future.listen(fut -> vertx.executeBlocking(
         f -> f.complete(future.get()), handler)
       );
