@@ -1,0 +1,25 @@
+{
+	"localHost" : "127.0.0.1",
+	"discoverySpi" : {
+		"@class" : "org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi",
+		"ipFinder" : {
+			"@class" : "org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder",
+			"addresses" : ["127.0.0.1:47500..47549"]
+		}
+	},
+	"cacheConfiguration" : [{
+		"name" : "*",
+		"cacheMode" : "PARTITIONED",
+        "backups" : 1,
+        "readFromBackup" : false,
+        "startSize" : 15000,
+        "affinity" : {
+        	"@class" : "org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction",
+        	"partitions" : 128
+        }
+	}],
+	"includeEventTypes" : [
+		"EVT_CACHE_OBJECT_REMOVED"
+	],
+	"metricsLogFrequency" : 0
+}
