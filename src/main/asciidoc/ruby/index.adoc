@@ -27,7 +27,7 @@ Alternatively, you can configure the following system property to instruct vert.
 
 ### Using Vert.x from command line
 
-`vertx-ignite-3.4.2.jar` should be in the `lib` directory of the Vert.x installation.
+`vertx-ignite-3.5.0.Beta1.jar` should be in the `lib` directory of the Vert.x installation.
 
 ### Using Vert.x in Maven or Gradle project
 
@@ -40,7 +40,7 @@ Add a dependency to the artifact.
 <dependency>
   <groupId>io.vertx</groupId>
   <artifactId>vertx-ignite</artifactId>
-  <version>3.4.2</version>
+  <version>3.5.0.Beta1</version>
 </dependency>
 ----
 
@@ -48,7 +48,7 @@ Add a dependency to the artifact.
 
 [source,groovy,subs="+attributes"]
 ----
-compile 'io.vertx:vertx-ignite:3.4.2'
+compile 'io.vertx:vertx-ignite:3.5.0.Beta1'
 ----
 
 ### Programmatically specifying cluster manager
@@ -71,6 +71,10 @@ Vertx.clusteredVertx(options, res -> {
 ----
 
 == Configuring cluster manager
+
+Note: Starting with version 2.0, Apache Ignite has introduced a new off-heap memory architecture. All caches use
+off-heap memory by default. New memory architecture is described in
+https://apacheignite.readme.io/docs/page-memory[Ignite Virtual Memory] article.
 
 === Using configuration file
 
