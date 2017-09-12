@@ -80,7 +80,11 @@ public class QueryCursorStream<IN, OUT> implements AsyncMapStream<OUT> {
             doRead();
           }
         } else {
-          handleException(ar.cause());
+          close(ar2 -> {
+            synchronized (this) {
+              handleException(ar.cause());
+            }
+          });
         }
       }
     });
@@ -125,7 +129,11 @@ public class QueryCursorStream<IN, OUT> implements AsyncMapStream<OUT> {
               doRead();
             }
           } else {
-            handleException(ar.cause());
+            close(ar2 -> {
+              synchronized (this) {
+                handleException(ar.cause());
+              }
+            });
           }
         }
       });
@@ -142,7 +150,7 @@ public class QueryCursorStream<IN, OUT> implements AsyncMapStream<OUT> {
       queue.add(iterator.next());
     }
     if (queue.isEmpty()) {
-      context.runOnContext(v -> {
+      close(ar -> {
         synchronized (this) {
           readInProgress = false;
           if (endHandler != null) {
