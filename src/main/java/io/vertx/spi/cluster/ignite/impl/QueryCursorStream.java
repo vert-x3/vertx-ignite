@@ -16,10 +16,9 @@
 
 package io.vertx.spi.cluster.ignite.impl;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
-import io.vertx.core.shareddata.AsyncMapStream;
+import io.vertx.core.streams.ReadStream;
 import org.apache.ignite.cache.query.QueryCursor;
 
 import java.util.ArrayDeque;
@@ -31,7 +30,7 @@ import java.util.function.Supplier;
 /**
  * @author Thomas Segismont
  */
-public class QueryCursorStream<IN, OUT> implements AsyncMapStream<OUT> {
+public class QueryCursorStream<IN, OUT> implements ReadStream<OUT> {
 
   private static final int BATCH_SIZE = 10;
 
@@ -71,28 +70,29 @@ public class QueryCursorStream<IN, OUT> implements AsyncMapStream<OUT> {
   @Override
   public synchronized QueryCursorStream<IN, OUT> handler(Handler<OUT> handler) {
     checkClosed();
-    this.dataHandler = handler;
-    context.<QueryCursor<IN>>executeBlocking(fut -> fut.complete(queryCursorSupplier.get()), ar -> {
-      synchronized (this) {
-        if (ar.succeeded()) {
-          queryCursor = ar.result();
-          if (canRead()) {
-            doRead();
-          }
-        } else {
-          close(ar2 -> {
-            synchronized (this) {
-              handleException(ar.cause());
+    if (handler == null) {
+      close();
+    } else {
+      dataHandler = handler;
+      context.<QueryCursor<IN>>executeBlocking(fut -> fut.complete(queryCursorSupplier.get()), ar -> {
+        synchronized (this) {
+          if (ar.succeeded()) {
+            queryCursor = ar.result();
+            if (canRead()) {
+              doRead();
             }
-          });
+          } else {
+            close();
+            handleException(ar.cause());
+          }
         }
-      }
-    });
+      });
+    }
     return this;
   }
 
   private boolean canRead() {
-    return dataHandler != null && !paused && !closed;
+    return !paused && !closed;
   }
 
   @Override
@@ -129,11 +129,8 @@ public class QueryCursorStream<IN, OUT> implements AsyncMapStream<OUT> {
               doRead();
             }
           } else {
-            close(ar2 -> {
-              synchronized (this) {
-                handleException(ar.cause());
-              }
-            });
+            close();
+            handleException(ar.cause());
           }
         }
       });
@@ -150,9 +147,9 @@ public class QueryCursorStream<IN, OUT> implements AsyncMapStream<OUT> {
       queue.add(iterator.next());
     }
     if (queue.isEmpty()) {
-      close(ar -> {
+      close();
+      context.runOnContext(v -> {
         synchronized (this) {
-          readInProgress = false;
           if (endHandler != null) {
             endHandler.handle(null);
           }
@@ -185,18 +182,13 @@ public class QueryCursorStream<IN, OUT> implements AsyncMapStream<OUT> {
     return this;
   }
 
-  @Override
-  public void close(Handler<AsyncResult<Void>> completionHandler) {
-    context.<Void>executeBlocking(fut -> {
-      queryCursor.close();
-      fut.complete();
-    }, ar -> {
-      synchronized (this) {
-        closed = true;
-        if (completionHandler != null) {
-          completionHandler.handle(ar);
-        }
+  private void close() {
+    closed = true;
+    context.executeBlocking(fut -> {
+      if (queryCursor != null) {
+        queryCursor.close();
       }
-    });
+      fut.complete();
+    }, false, null);
   }
 }

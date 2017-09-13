@@ -22,7 +22,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.shareddata.AsyncMap;
-import io.vertx.core.shareddata.AsyncMapStream;
+import io.vertx.core.streams.ReadStream;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.lang.IgniteFuture;
@@ -142,17 +142,17 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
   }
 
   @Override
-  public AsyncMapStream<K> keyStream() {
+  public ReadStream<K> keyStream() {
     return new QueryCursorStream<>(vertx.getOrCreateContext(), () -> cache.query(new ScanQuery<K, V>()), Cache.Entry::getKey);
   }
 
   @Override
-  public AsyncMapStream<V> valueStream() {
+  public ReadStream<V> valueStream() {
     return new QueryCursorStream<>(vertx.getOrCreateContext(), () -> cache.query(new ScanQuery<K, V>()), Cache.Entry::getValue);
   }
 
   @Override
-  public AsyncMapStream<Map.Entry<K, V>> entryStream() {
+  public ReadStream<Map.Entry<K, V>> entryStream() {
     return new QueryCursorStream<>(vertx.getOrCreateContext(), () -> cache.query(new ScanQuery<K, V>()), cacheEntry -> {
       return new SimpleImmutableEntry<>(cacheEntry.getKey(), cacheEntry.getValue());
     });
