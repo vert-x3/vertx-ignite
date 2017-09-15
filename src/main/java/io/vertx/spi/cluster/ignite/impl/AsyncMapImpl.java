@@ -22,7 +22,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.shareddata.AsyncMap;
-import io.vertx.core.streams.ReadStream;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.lang.IgniteFuture;
@@ -30,7 +29,6 @@ import org.apache.ignite.lang.IgniteFuture;
 import javax.cache.Cache;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -139,23 +137,6 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
       }
       fut.complete(map);
     }, resultHandler);
-  }
-
-  @Override
-  public ReadStream<K> keyStream() {
-    return new QueryCursorStream<>(vertx.getOrCreateContext(), () -> cache.query(new ScanQuery<K, V>()), Cache.Entry::getKey);
-  }
-
-  @Override
-  public ReadStream<V> valueStream() {
-    return new QueryCursorStream<>(vertx.getOrCreateContext(), () -> cache.query(new ScanQuery<K, V>()), Cache.Entry::getValue);
-  }
-
-  @Override
-  public ReadStream<Map.Entry<K, V>> entryStream() {
-    return new QueryCursorStream<>(vertx.getOrCreateContext(), () -> cache.query(new ScanQuery<K, V>()), cacheEntry -> {
-      return new SimpleImmutableEntry<>(cacheEntry.getKey(), cacheEntry.getValue());
-    });
   }
 
   private <T> void execute(Function<IgniteCache<K, V>, IgniteFuture<T>> cacheOp, Handler<AsyncResult<T>> handler) {
