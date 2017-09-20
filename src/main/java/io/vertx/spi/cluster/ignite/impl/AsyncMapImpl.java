@@ -22,12 +22,20 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.shareddata.AsyncMap;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.query.ScanQuery;
+import org.apache.ignite.lang.IgniteFuture;
+
+import javax.cache.Cache;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.lang.IgniteFuture;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 /**
  * Async wrapper for {@link MapImpl}.
@@ -103,6 +111,32 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
   @Override
   public void size(Handler<AsyncResult<Integer>> handler) {
     execute(IgniteCache::sizeAsync, handler);
+  }
+
+  @Override
+  public void keys(Handler<AsyncResult<Set<K>>> resultHandler) {
+    Future<Map<K, V>> entriesFuture = Future.future();
+    entries(entriesFuture);
+    entriesFuture.map(Map::keySet).setHandler(resultHandler);
+  }
+
+  @Override
+  public void values(Handler<AsyncResult<List<V>>> resultHandler) {
+    Future<Map<K, V>> entriesFuture = Future.future();
+    entries(entriesFuture);
+    entriesFuture.<List<V>>map(map -> new ArrayList<>(map.values())).setHandler(resultHandler);
+  }
+
+  @Override
+  public void entries(Handler<AsyncResult<Map<K, V>>> resultHandler) {
+    vertx.executeBlocking(fut -> {
+      List<Cache.Entry<K, V>> all = cache.query(new ScanQuery<K, V>()).getAll();
+      Map<K, V> map = new HashMap<>(all.size());
+      for (Cache.Entry<K, V> entry : all) {
+        map.put(entry.getKey(), entry.getValue());
+      }
+      fut.complete(map);
+    }, resultHandler);
   }
 
   private <T> void execute(Function<IgniteCache<K, V>, IgniteFuture<T>> cacheOp, Handler<AsyncResult<T>> handler) {
