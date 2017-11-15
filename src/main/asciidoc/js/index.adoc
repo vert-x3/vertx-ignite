@@ -27,7 +27,7 @@ Alternatively, you can configure the following system property to instruct vert.
 
 ### Using Vert.x from command line
 
-`vertx-ignite-3.5.0.Beta1.jar` should be in the `lib` directory of the Vert.x installation.
+`vertx-ignite-3.5.1-SNAPSHOT.jar` should be in the `lib` directory of the Vert.x installation.
 
 ### Using Vert.x in Maven or Gradle project
 
@@ -40,7 +40,7 @@ Add a dependency to the artifact.
 <dependency>
   <groupId>io.vertx</groupId>
   <artifactId>vertx-ignite</artifactId>
-  <version>3.5.0.Beta1</version>
+  <version>3.5.1-SNAPSHOT</version>
 </dependency>
 ----
 
@@ -48,7 +48,7 @@ Add a dependency to the artifact.
 
 [source,groovy,subs="+attributes"]
 ----
-compile 'io.vertx:vertx-ignite:3.5.0.Beta1'
+compile 'io.vertx:vertx-ignite:3.5.1-SNAPSHOT'
 ----
 
 ### Programmatically specifying cluster manager
@@ -128,10 +128,10 @@ Note that some systems don't consult the routing table for IP multicast routing,
 MacOS example:
 
 ----
-# Adds a multicast route for 224.0.0.1-231.255.255.254
+# Add a multicast route for 224.0.0.1-231.255.255.254
 sudo route add -net 224.0.0.0/5 127.0.0.1
 
-# Adds a multicast route for 232.0.0.1-239.255.255.254
+# Add a multicast route for 232.0.0.1-239.255.255.254
 sudo route add -net 232.0.0.0/5 192.168.1.3
 ----
 

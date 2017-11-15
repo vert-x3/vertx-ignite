@@ -58,7 +58,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static org.apache.ignite.events.EventType.*;
@@ -163,7 +162,7 @@ public class IgniteClusterManager implements ClusterManager {
     ContextImpl context = (ContextImpl) vertx.getOrCreateContext();
     // Ordered on the internal blocking executor
     context.executeBlocking(() -> {
-      boolean locked = false;
+      boolean locked;
 
       try {
         IgniteQueue<String> queue = getQueue(name, true);
@@ -275,14 +274,12 @@ public class IgniteClusterManager implements ClusterManager {
   private void releasePendingLocksForFailedNode(final String nodeId) {
     Set<String> processed = new HashSet<>();
 
-    pendingLocks.forEach(new Consumer<String>() {
-      @Override public void accept(String name) {
-        if (processed.add(name)) {
-          IgniteQueue<String> queue = getQueue(name, false);
+    pendingLocks.forEach(name -> {
+      if (processed.add(name)) {
+        IgniteQueue<String> queue = getQueue(name, false);
 
-          if (queue != null && nodeId.equals(queue.peek())) {
-            queue.remove(nodeId);
-          }
+        if (queue != null && nodeId.equals(queue.peek())) {
+          queue.remove(nodeId);
         }
       }
     });
@@ -352,7 +349,7 @@ public class IgniteClusterManager implements ClusterManager {
 
   private void setNodeID(IgniteConfiguration cfg) {
     UUID uuid = UUID.fromString(nodeID);
-    cfg.setNodeId(uuid);
+    cfg.setConsistentId(uuid);
     cfg.setIgniteInstanceName(VERTX_NODE_PREFIX + uuid);
   }
 

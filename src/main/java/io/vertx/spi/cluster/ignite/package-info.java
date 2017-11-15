@@ -146,10 +146,10 @@
  * MacOS example:
  *
  * ----
- * # Adds a multicast route for 224.0.0.1-231.255.255.254
+ * # Add a multicast route for 224.0.0.1-231.255.255.254
  * sudo route add -net 224.0.0.0/5 127.0.0.1
  *
- * # Adds a multicast route for 232.0.0.1-239.255.255.254
+ * # Add a multicast route for 232.0.0.1-239.255.255.254
  * sudo route add -net 232.0.0.0/5 192.168.1.3
  * ----
  *

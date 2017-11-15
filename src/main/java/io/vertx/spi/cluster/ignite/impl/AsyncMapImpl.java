@@ -152,7 +152,7 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
       IgniteCache<K, V> cache0 = ttl > 0 ?
         cache.withExpiryPolicy(new CreatedExpiryPolicy(new Duration(TimeUnit.MILLISECONDS, ttl))) : cache;
 
-      IgniteFuture<T> future = cacheOp.apply(cache0);;
+      IgniteFuture<T> future = cacheOp.apply(cache0);
       future.listen(fut -> vertx.executeBlocking(
         f -> f.complete(future.get()), handler)
       );
