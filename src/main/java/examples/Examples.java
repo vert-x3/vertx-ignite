@@ -4,6 +4,8 @@ import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
+
+import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.IgniteConfiguration;
 
 /**
@@ -40,4 +42,19 @@ public class Examples {
     });
   }
 
+  public void example3() {
+    //Creation code (ommited)
+    Ignite ignite = null;
+    ClusterManager clusterManager = new IgniteClusterManager(ignite);
+
+    VertxOptions options = new VertxOptions().setClusterManager(clusterManager);
+    Vertx.clusteredVertx(options, res -> {
+      if (res.succeeded()) {
+        Vertx vertx = res.result();
+      } else {
+        // failed!
+      }
+    });
+  }
+  
 }
