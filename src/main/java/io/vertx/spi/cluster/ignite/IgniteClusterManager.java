@@ -44,6 +44,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.CollectionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
+import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.util.typedef.F;
 
@@ -58,8 +59,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import org.apache.ignite.lang.IgnitePredicate;
 
 import static org.apache.ignite.events.EventType.*;
 
@@ -88,9 +89,11 @@ public class IgniteClusterManager implements ClusterManager {
 
   private IgniteConfiguration cfg;
   private Ignite ignite;
+  private boolean customIgnite;
 
   private String nodeID = UUID.randomUUID().toString();
   private NodeListener nodeListener;
+  private IgnitePredicate<Event> eventListener;
 
   private volatile boolean active;
 
@@ -129,6 +132,26 @@ public class IgniteClusterManager implements ClusterManager {
     this.cfg = loadConfiguration(configFile);
   }
 
+  /**
+   * Creates cluster manager instance with given {@code Ignite} instance.
+   *
+   * @param ignite {@code Ignite} instance.
+   */
+  public IgniteClusterManager(Ignite ignite) {
+    Objects.requireNonNull(ignite, "Ignite instance can't be null.");
+    this.ignite = ignite;
+    this.customIgnite = true;
+  }
+
+  /**
+   * Returns instance of {@code Ignite}.
+   *
+   * @return {@code Ignite} instance.
+   */
+  public Ignite getIgniteInstance() {
+    return ignite;
+  }
+
   @Override
   public void setVertx(Vertx vertx) {
     this.vertx = vertx;
@@ -163,7 +186,7 @@ public class IgniteClusterManager implements ClusterManager {
     ContextImpl context = (ContextImpl) vertx.getOrCreateContext();
     // Ordered on the internal blocking executor
     context.executeBlocking(() -> {
-      boolean locked = false;
+      boolean locked;
 
       try {
         IgniteQueue<String> queue = getQueue(name, true);
@@ -220,7 +243,9 @@ public class IgniteClusterManager implements ClusterManager {
         if (!active) {
           active = true;
 
-          ignite = cfg == null ? Ignition.start(loadConfiguration()) : Ignition.start(cfg);
+          if (!customIgnite) {
+            ignite = cfg == null ? Ignition.start(loadConfiguration()) : Ignition.start(cfg);
+          }
           nodeID = nodeId(ignite.cluster().localNode());
 
           for (CacheConfiguration cacheCfg : ignite.configuration().getCacheConfiguration()) {
@@ -236,7 +261,7 @@ public class IgniteClusterManager implements ClusterManager {
             collectionCfg = new CollectionConfiguration();
           }
 
-          ignite.events().localListen(event -> {
+          eventListener = event -> {
             if (!active) {
               return false;
             }
@@ -246,7 +271,7 @@ public class IgniteClusterManager implements ClusterManager {
                 if (isActive()) {
                   switch (event.type()) {
                     case EVT_NODE_JOINED:
-                      nodeListener.nodeAdded(nodeId(((DiscoveryEvent) event).eventNode()));
+                      nodeListener.nodeAdded(nodeId(((DiscoveryEvent)event).eventNode()));
                       break;
                     case EVT_NODE_LEFT:
                     case EVT_NODE_FAILED:
@@ -261,7 +286,9 @@ public class IgniteClusterManager implements ClusterManager {
             }
 
             return true;
-          }, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED);
+          };
+
+          ignite.events().localListen(eventListener, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED);
 
           fut.complete();
         }
@@ -275,14 +302,12 @@ public class IgniteClusterManager implements ClusterManager {
   private void releasePendingLocksForFailedNode(final String nodeId) {
     Set<String> processed = new HashSet<>();
 
-    pendingLocks.forEach(new Consumer<String>() {
-      @Override public void accept(String name) {
-        if (processed.add(name)) {
-          IgniteQueue<String> queue = getQueue(name, false);
+    pendingLocks.forEach(name -> {
+      if (processed.add(name)) {
+        IgniteQueue<String> queue = getQueue(name, false);
 
-          if (queue != null && nodeId.equals(queue.peek())) {
-            queue.remove(nodeId);
-          }
+        if (queue != null && nodeId.equals(queue.peek())) {
+          queue.remove(nodeId);
         }
       }
     });
@@ -295,7 +320,10 @@ public class IgniteClusterManager implements ClusterManager {
         if (active) {
           active = false;
           try {
-            ignite.close();
+            if (!customIgnite)
+              ignite.close();
+            else if (eventListener != null)
+              ignite.events().stopLocalListen(eventListener, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED);
           } catch (Exception e) {
             log.error(e);
           }
