@@ -24,7 +24,7 @@ import org.junit.Test;
 /**
  * @author Andrey Gura
  */
-public class IgniteClusteredAsynchronousLockTest extends ClusteredAsynchronousLockTest {
+public class IgnitesClusteredAsynchronousLockTest extends ClusteredAsynchronousLockTest {
   @Override
   protected ClusterManager getClusterManager() {
     return new IgniteClusterManager();
