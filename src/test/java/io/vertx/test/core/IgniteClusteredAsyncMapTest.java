@@ -38,46 +38,4 @@ public class IgniteClusteredAsyncMapTest extends ClusteredAsyncMapTest {
   public void testMapPutTtlThenPut() {
     super.testMapPutTtlThenPut();
   }
-
-  @Override
-  @Test
-  @Ignore("Ignite does not support ClusterSerializable yet")
-  public void testMapPutGetClusterSerializableObject() {
-    super.testMapPutGetClusterSerializableObject();
-  }
-
-  @Override
-  @Test
-  @Ignore("Ignite does not support ClusterSerializable yet")
-  public void testMapPutIfAbsentGetClusterSerializableObject() {
-    super.testMapPutIfAbsentGetClusterSerializableObject();
-  }
-
-  @Override
-  @Test
-  @Ignore("Ignite does not support ClusterSerializable yet")
-  public void testMapRemoveClusterSerializableObject() {
-    super.testMapRemoveClusterSerializableObject();
-  }
-
-  @Override
-  @Test
-  @Ignore("Ignite does not support ClusterSerializable yet")
-  public void testMapRemoveIfPresentClusterSerializableObject() {
-    super.testMapRemoveIfPresentClusterSerializableObject();
-  }
-
-  @Override
-  @Test
-  @Ignore("Ignite does not support ClusterSerializable yet")
-  public void testMapReplaceClusterSerializableObject() {
-    super.testMapReplaceClusterSerializableObject();
-  }
-
-  @Override
-  @Test
-  @Ignore("Ignite does not support ClusterSerializable yet")
-  public void testMapReplaceIfPresentClusterSerializableObject() {
-    super.testMapReplaceIfPresentClusterSerializableObject();
-  }
 }
