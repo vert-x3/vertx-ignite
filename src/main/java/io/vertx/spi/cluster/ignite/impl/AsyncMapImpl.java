@@ -37,6 +37,9 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import static io.vertx.spi.cluster.ignite.impl.ClusterSerializationUtils.marshal;
+import static io.vertx.spi.cluster.ignite.impl.ClusterSerializationUtils.unmarshal;
+
 /**
  * Async wrapper for {@link MapImpl}.
  *
@@ -60,47 +63,47 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
 
   @Override
   public void get(K key, Handler<AsyncResult<V>> handler) {
-    execute(cache -> cache.getAsync(key), handler);
+    execute(cache -> cache.getAsync(marshal(key)), handler);
   }
 
   @Override
   public void put(K key, V value, Handler<AsyncResult<Void>> handler) {
-    execute(cache -> cache.putAsync(key, value), handler);
+    execute(cache -> cache.putAsync(marshal(key), marshal(value)), handler);
   }
 
   @Override
   public void put(K key, V value, long ttl, Handler<AsyncResult<Void>> handler) {
-    executeWithTtl(cache -> cache.putAsync(key, value), handler, ttl);
+    executeWithTtl(cache -> cache.putAsync(marshal(key), marshal(value)), handler, ttl);
   }
 
   @Override
   public void putIfAbsent(K key, V value, Handler<AsyncResult<V>> handler) {
-    execute(cache -> cache.getAndPutIfAbsentAsync(key, value), handler);
+    execute(cache -> cache.getAndPutIfAbsentAsync(marshal(key), marshal(value)), handler);
   }
 
   @Override
   public void putIfAbsent(K key, V value, long ttl, Handler<AsyncResult<V>> handler) {
-    executeWithTtl(cache -> cache.getAndPutIfAbsentAsync(key, value), handler, ttl);
+    executeWithTtl(cache -> cache.getAndPutIfAbsentAsync(marshal(key), marshal(value)), handler, ttl);
   }
 
   @Override
   public void remove(K key, Handler<AsyncResult<V>> handler) {
-    execute(cache -> cache.getAndRemoveAsync(key), handler);
+    execute(cache -> cache.getAndRemoveAsync(marshal(key)), handler);
   }
 
   @Override
   public void removeIfPresent(K key, V value, Handler<AsyncResult<Boolean>> handler) {
-    execute(cache -> cache.removeAsync(key, value), handler);
+    execute(cache -> cache.removeAsync(marshal(key), marshal(value)), handler);
   }
 
   @Override
   public void replace(K key, V value, Handler<AsyncResult<V>> handler) {
-    execute(cache -> cache.getAndReplaceAsync(key, value), handler);
+    execute(cache -> cache.getAndReplaceAsync(marshal(key), marshal(value)), handler);
   }
 
   @Override
   public void replaceIfPresent(K key, V oldValue, V newValue, Handler<AsyncResult<Boolean>> handler) {
-    execute(cache -> cache.replaceAsync(key, oldValue, newValue), handler);
+    execute(cache -> cache.replaceAsync(marshal(key), marshal(oldValue), marshal(newValue)), handler);
   }
 
   @Override
@@ -133,7 +136,7 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
       List<Cache.Entry<K, V>> all = cache.query(new ScanQuery<K, V>()).getAll();
       Map<K, V> map = new HashMap<>(all.size());
       for (Cache.Entry<K, V> entry : all) {
-        map.put(entry.getKey(), entry.getValue());
+        map.put(unmarshal(entry.getKey()), unmarshal(entry.getValue()));
       }
       fut.complete(map);
     }, resultHandler);
@@ -152,9 +155,9 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
       IgniteCache<K, V> cache0 = ttl > 0 ?
         cache.withExpiryPolicy(new CreatedExpiryPolicy(new Duration(TimeUnit.MILLISECONDS, ttl))) : cache;
 
-      IgniteFuture<T> future = cacheOp.apply(cache0);;
+      IgniteFuture<T> future = cacheOp.apply(cache0);
       future.listen(fut -> vertx.executeBlocking(
-        f -> f.complete(future.get()), handler)
+        f -> f.complete(unmarshal(future.get())), handler)
       );
     } catch (Exception e) {
       handler.handle(Future.failedFuture(e));
