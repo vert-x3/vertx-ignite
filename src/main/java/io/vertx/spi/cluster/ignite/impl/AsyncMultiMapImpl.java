@@ -30,10 +30,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
@@ -44,6 +44,9 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 
+import static io.vertx.spi.cluster.ignite.impl.ClusterSerializationUtils.marshal;
+import static io.vertx.spi.cluster.ignite.impl.ClusterSerializationUtils.unmarshal;
+import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED;
 
 /**
@@ -74,7 +77,7 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
 
       if (Objects.equals(cacheEvent.cacheName(), cache.getName()) &&
           ((IgniteCacheProxy)cache).context().localNodeId().equals(cacheEvent.eventNode().id())) {
-        K key = cacheEvent.key();
+        K key = unmarshal(cacheEvent.key());
 
         switch (cacheEvent.type()) {
           case EVT_CACHE_OBJECT_REMOVED:
@@ -95,13 +98,14 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
 
   @Override
   public void add(K key, V value, Handler<AsyncResult<Void>> handler) {
-    execute(cache -> cache.invokeAsync(key, (entry, arguments) -> {
+    V val0 = marshal(value);
+    execute(cache -> cache.invokeAsync(marshal(key), (entry, arguments) -> {
       Set<V> values = entry.getValue();
 
       if (values == null)
         values = new HashSet<>();
 
-      values.add(value);
+      values.add(val0);
       entry.setValue(values);
       return null;
     }), handler);
@@ -110,18 +114,26 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
   @Override
   public void get(K key, Handler<AsyncResult<ChoosableIterable<V>>> handler) {
     execute(
-      cache -> cache.getAsync(key),
+      cache -> cache.getAsync(marshal(key)),
       (Set<V> items) -> {
+        Set<V> unmarshalledItems = null;
+
+        if (items != null) {
+          unmarshalledItems = items.stream().map(ClusterSerializationUtils::unmarshal).collect(toSet());
+        }
+
+        Set<V> items0 = unmarshalledItems;
+
         ChoosableIterableImpl<V> it = subs.compute(key, (k, oldValue) -> {
-          if (items == null || items.isEmpty()) {
+          if (items0 == null || items0.isEmpty()) {
             return null;
           }
 
           if (oldValue == null) {
-            return new ChoosableIterableImpl<>(new ArrayList<>(items));
+            return new ChoosableIterableImpl<>(new ArrayList<>(items0));
           }
           else {
-            oldValue.update(new ArrayList<>(items));
+            oldValue.update(new ArrayList<>(items0));
             return oldValue;
           }
         });
@@ -134,15 +146,18 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
 
   @Override
   public void remove(K key, V value, Handler<AsyncResult<Boolean>> handler) {
-    execute(cache -> cache.invokeAsync(key, (entry, arguments) -> {
+    execute(cache -> cache.invokeAsync(marshal(key), (entry, arguments) -> {
       Set<V> values = entry.getValue();
 
       if (values != null) {
+        values = values.stream().map(ClusterSerializationUtils::unmarshal).collect(toSet());
+
         boolean removed = values.remove(value);
 
         if (values.isEmpty()) {
           entry.remove();
         } else {
+          values = values.stream().map(ClusterSerializationUtils::marshal).collect(toSet());
           entry.setValue(values);
         }
 
@@ -155,7 +170,7 @@ public class AsyncMultiMapImpl<K, V> implements AsyncMultiMap<K, V> {
 
   @Override
   public void removeAllForValue(V value, Handler<AsyncResult<Void>> handler) {
-    removeAllMatching(value::equals, handler);
+    removeAllMatching(obj -> value.equals(unmarshal(obj)), handler);
   }
 
   @Override

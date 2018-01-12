@@ -17,6 +17,7 @@
 
 package io.vertx.spi.cluster.ignite.impl;
 
+import java.util.HashMap;
 import org.apache.ignite.IgniteCache;
 
 import javax.cache.Cache;
@@ -26,6 +27,9 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import static io.vertx.spi.cluster.ignite.impl.ClusterSerializationUtils.marshal;
+import static io.vertx.spi.cluster.ignite.impl.ClusterSerializationUtils.unmarshal;
 
 /**
  * Represents Apache Ignite cache as {@link java.util.Map} interface implementation.
@@ -62,13 +66,15 @@ public class MapImpl<K, V> implements Map<K, V> {
   @Override
   @SuppressWarnings("unchecked")
   public boolean containsKey(Object key) {
-    return cache.containsKey((K) key);
+    return cache.containsKey((K) marshal(key));
   }
 
   @Override
   public boolean containsValue(Object value) {
     for (Cache.Entry<K, V> entry : cache) {
-      if (entry.getValue().equals(value))
+      V v = unmarshal(entry.getValue());
+
+      if (v.equals(value))
         return true;
     }
 
@@ -78,23 +84,29 @@ public class MapImpl<K, V> implements Map<K, V> {
   @Override
   @SuppressWarnings("unchecked")
   public V get(Object key) {
-    return cache.get((K) key);
+    return unmarshal(cache.get((K) marshal(key)));
   }
 
   @Override
   public V put(K key, V value) {
-    return cache.getAndPut(key, value);
+    return unmarshal(cache.getAndPut(marshal(key), marshal(value)));
   }
 
   @Override
   @SuppressWarnings("unchecked")
   public V remove(Object key) {
-    return cache.getAndRemove((K) key);
+    return unmarshal(cache.getAndRemove((K) marshal(key)));
   }
 
   @Override
   public void putAll(Map<? extends K, ? extends V> map) {
-    cache.putAll(map);
+    Map<K, V> map0 = new HashMap<>();
+
+    for (Entry<K, V> entry : map0.entrySet()) {
+      map0.put(marshal(entry.getKey()), marshal(entry.getValue()));
+    }
+
+    cache.putAll(map0);
   }
 
   @Override
@@ -107,7 +119,7 @@ public class MapImpl<K, V> implements Map<K, V> {
     Set<K> res = new HashSet<>();
 
     for (Cache.Entry<K, V> entry : cache) {
-      res.add(entry.getKey());
+      res.add(unmarshal(entry.getKey()));
     }
 
     return res;
@@ -118,7 +130,7 @@ public class MapImpl<K, V> implements Map<K, V> {
     Collection<V> res = new ArrayList<>();
 
     for (Cache.Entry<K, V> entry : cache) {
-      res.add(entry.getValue());
+      res.add(unmarshal(entry.getValue()));
     }
 
     return res;
@@ -129,7 +141,7 @@ public class MapImpl<K, V> implements Map<K, V> {
     Set<Entry<K, V>> res = new HashSet<>();
 
     for (Cache.Entry<K, V> entry : cache) {
-      res.add(new AbstractMap.SimpleImmutableEntry<>(entry.getKey(), entry.getValue()));
+      res.add(new AbstractMap.SimpleImmutableEntry<>(unmarshal(entry.getKey()), unmarshal(entry.getValue())));
     }
 
     return res;
@@ -137,22 +149,22 @@ public class MapImpl<K, V> implements Map<K, V> {
 
   @Override
   public V putIfAbsent(K key, V value) {
-    return cache.getAndPutIfAbsent(key, value);
+    return unmarshal(cache.getAndPutIfAbsent(marshal(key), marshal(value)));
   }
 
   @Override
   @SuppressWarnings("unchecked")
   public boolean remove(Object key, Object value) {
-    return cache.remove((K) key, (V) value);
+    return cache.remove((K) marshal(key), (V) marshal(value));
   }
 
   @Override
   public boolean replace(K key, V oldValue, V newValue) {
-    return cache.replace(key, oldValue, newValue);
+    return cache.replace(marshal(key), marshal(oldValue), marshal(newValue));
   }
 
   @Override
   public V replace(K key, V value) {
-    return cache.getAndReplace(key, value);
+    return unmarshal(cache.getAndReplace(marshal(key), marshal(value)));
   }
 }
