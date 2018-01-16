@@ -19,8 +19,6 @@ package io.vertx.test.core;
 
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
-import org.junit.Ignore;
-import org.junit.Test;
 
 /**
  * @author Andrey Gura
@@ -30,12 +28,5 @@ public class IgniteClusteredAsyncMapTest extends ClusteredAsyncMapTest {
   @Override
   protected ClusterManager getClusterManager() {
     return new IgniteClusterManager();
-  }
-
-  @Override
-  @Test
-  @Ignore("Ignite removes the binding even if a new entry is added without ttl")
-  public void testMapPutTtlThenPut() {
-    super.testMapPutTtlThenPut();
   }
 }
