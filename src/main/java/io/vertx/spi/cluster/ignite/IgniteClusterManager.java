@@ -33,6 +33,9 @@ import io.vertx.core.spi.cluster.NodeListener;
 import io.vertx.spi.cluster.ignite.impl.AsyncMapImpl;
 import io.vertx.spi.cluster.ignite.impl.AsyncMultiMapImpl;
 import io.vertx.spi.cluster.ignite.impl.MapImpl;
+import java.io.Serializable;
+import javax.cache.expiry.Duration;
+import javax.cache.expiry.ExpiryPolicy;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicLong;
 import org.apache.ignite.IgniteCache;
@@ -62,6 +65,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.ignite.lang.IgnitePredicate;
 
+import static javax.cache.expiry.Duration.ETERNAL;
 import static org.apache.ignite.events.EventType.*;
 
 /**
@@ -82,6 +86,9 @@ public class IgniteClusterManager implements ClusterManager {
   public static final String VERTX_CACHE_TEMPLATE_NAME = "*";
 
   private static final String VERTX_NODE_PREFIX = "vertx.ignite.node.";
+
+  // Workaround for https://github.com/vert-x3/vertx-ignite/issues/63
+  private static final ExpiryPolicy DEFAULT_EXPIRY_POLICY = new ClearExpiryPolicy();
 
   private final Queue<String> pendingLocks = new ConcurrentLinkedQueue<>();
 
@@ -385,7 +392,8 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   private <K, V> IgniteCache<K, V> getCache(String name) {
-    return ignite.getOrCreateCache(name);
+    IgniteCache<K, V> cache = ignite.getOrCreateCache(name);
+    return cache.withExpiryPolicy(DEFAULT_EXPIRY_POLICY);
   }
 
   private <T> IgniteQueue<T> getQueue(String name, boolean create) {
@@ -464,6 +472,23 @@ public class IgniteClusterManager implements ClusterManager {
     public void compareAndSet(long expected, long value, Handler<AsyncResult<Boolean>> handler) {
       Objects.requireNonNull(handler, "handler");
       vertx.executeBlocking(fut -> fut.complete(cnt.compareAndSet(expected, value)), handler);
+    }
+  }
+
+  private static class ClearExpiryPolicy implements ExpiryPolicy, Serializable {
+    @Override
+    public Duration getExpiryForCreation() {
+      return ETERNAL;
+    }
+
+    @Override
+    public Duration getExpiryForAccess() {
+      return ETERNAL;
+    }
+
+    @Override
+    public Duration getExpiryForUpdate() {
+      return ETERNAL;
     }
   }
 }
