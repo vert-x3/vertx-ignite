@@ -11,7 +11,7 @@ addresses)
 * Distributed Locks
 * Distributed Counters
 
-Cluster managers *do not* handle the event bus inter-node transport, this is done directly by Vert.x with TCP
+Cluster managersdo not* handle the event bus inter-node transport, this is done directly by Vert.x with TCP
 connections.
 
 Vert.x cluster manager is a pluggable component, so you can pick the one you want, or the one that is the most
@@ -27,7 +27,7 @@ Alternatively, you can configure the following system property to instruct vert.
 
 ### Using Vert.x from command line
 
-`vertx-ignite-3.5.1.jar` should be in the `lib` directory of the Vert.x installation.
+`vertx-ignite-${maven.version}.jar` should be in the `lib` directory of the Vert.x installation.
 
 ### Using Vert.x in Maven or Gradle project
 
@@ -38,9 +38,9 @@ Add a dependency to the artifact.
 [source,xml,subs="+attributes"]
 ----
 <dependency>
-  <groupId>io.vertx</groupId>
-  <artifactId>vertx-ignite</artifactId>
-  <version>3.5.1</version>
+  <groupId>${maven.groupId}</groupId>
+  <artifactId>${maven.artifactId}</artifactId>
+  <version>${maven.version}</version>
 </dependency>
 ----
 
@@ -48,7 +48,7 @@ Add a dependency to the artifact.
 
 [source,groovy,subs="+attributes"]
 ----
-compile 'io.vertx:vertx-ignite:3.5.1'
+compile '${maven.groupId}:${maven.artifactId}:${maven.version}'
 ----
 
 ### Programmatically specifying cluster manager
@@ -160,7 +160,7 @@ vertx run myverticle.js -cluster -cluster-host your-ip-address
 
 Where `your-ip-address` is the same IP address you specified in the Apache Ignite configuration.
 
-If using Vert.x programmatically you can specify this using `link:../../apidocs/io/vertx/core/VertxOptions.html#setClusterHost-java.lang.String-[setClusterHost]`.
+If using Vert.x programmatically you can specify this using {@link io.vertx.core.VertxOptions#setClusterHost(java.lang.String)}.
 
 === Using a VPN
 
