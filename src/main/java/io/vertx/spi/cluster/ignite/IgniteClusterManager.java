@@ -21,7 +21,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxException;
-import io.vertx.core.impl.ContextImpl;
+import io.vertx.core.impl.ContextInternal;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
@@ -50,6 +50,7 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.lang.IgnitePredicate;
 
 import java.io.InputStream;
 import java.net.URL;
@@ -63,7 +64,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import org.apache.ignite.lang.IgnitePredicate;
 
 import static javax.cache.expiry.Duration.ETERNAL;
 import static org.apache.ignite.events.EventType.*;
@@ -190,7 +190,7 @@ public class IgniteClusterManager implements ClusterManager {
 
   @Override
   public void getLockWithTimeout(String name, long timeout, Handler<AsyncResult<Lock>> handler) {
-    ContextImpl context = (ContextImpl) vertx.getOrCreateContext();
+    ContextInternal context = (ContextInternal) vertx.getOrCreateContext();
     // Ordered on the internal blocking executor
     context.executeBlocking(() -> {
       boolean locked;
