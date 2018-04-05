@@ -192,7 +192,7 @@ public class IgniteClusterManager implements ClusterManager {
   public void getLockWithTimeout(String name, long timeout, Handler<AsyncResult<Lock>> handler) {
     ContextInternal context = (ContextInternal) vertx.getOrCreateContext();
     // Ordered on the internal blocking executor
-    context.executeBlocking(() -> {
+    context.executeBlockingInternal(fut -> {
       boolean locked;
 
       try {
@@ -220,7 +220,7 @@ public class IgniteClusterManager implements ClusterManager {
       }
 
       if (locked) {
-        return new LockImpl(name);
+        fut.complete(new LockImpl(name));
       } else {
         throw new VertxException("Timed out waiting to get lock " + name);
       }
