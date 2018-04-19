@@ -255,12 +255,14 @@ public class IgniteClusterManager implements ClusterManager {
           }
           nodeID = nodeId(ignite.cluster().localNode());
 
-          for (CacheConfiguration cacheCfg : ignite.configuration().getCacheConfiguration()) {
-            if (cacheCfg.getName().equals(VERTX_CACHE_TEMPLATE_NAME)) {
-              collectionCfg = new CollectionConfiguration();
-              collectionCfg.setAtomicityMode(cacheCfg.getAtomicityMode());
-              collectionCfg.setBackups(cacheCfg.getBackups());
-              break;
+          if(ignite.configuration().getCacheConfiguration() != null) {
+            for (CacheConfiguration cacheCfg : ignite.configuration().getCacheConfiguration()) {
+              if (cacheCfg.getName().equals(VERTX_CACHE_TEMPLATE_NAME)) {
+                collectionCfg = new CollectionConfiguration();
+                collectionCfg.setAtomicityMode(cacheCfg.getAtomicityMode());
+                collectionCfg.setBackups(cacheCfg.getBackups());
+                break;
+              }
             }
           }
 
