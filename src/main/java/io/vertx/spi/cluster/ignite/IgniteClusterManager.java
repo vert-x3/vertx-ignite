@@ -21,7 +21,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxException;
-import io.vertx.core.impl.ContextInternal;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
@@ -33,9 +32,6 @@ import io.vertx.core.spi.cluster.NodeListener;
 import io.vertx.spi.cluster.ignite.impl.AsyncMapImpl;
 import io.vertx.spi.cluster.ignite.impl.AsyncMultiMapImpl;
 import io.vertx.spi.cluster.ignite.impl.MapImpl;
-import java.io.Serializable;
-import javax.cache.expiry.Duration;
-import javax.cache.expiry.ExpiryPolicy;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicLong;
 import org.apache.ignite.IgniteCache;
@@ -52,7 +48,10 @@ import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgnitePredicate;
 
+import javax.cache.expiry.Duration;
+import javax.cache.expiry.ExpiryPolicy;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.List;
@@ -65,7 +64,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static javax.cache.expiry.Duration.ETERNAL;
+import static javax.cache.expiry.Duration.*;
 import static org.apache.ignite.events.EventType.*;
 
 /**
@@ -190,9 +189,7 @@ public class IgniteClusterManager implements ClusterManager {
 
   @Override
   public void getLockWithTimeout(String name, long timeout, Handler<AsyncResult<Lock>> handler) {
-    ContextInternal context = (ContextInternal) vertx.getOrCreateContext();
-    // Ordered on the internal blocking executor
-    context.executeBlockingInternal(fut -> {
+    vertx.executeBlocking(fut -> {
       boolean locked;
 
       try {
@@ -224,7 +221,7 @@ public class IgniteClusterManager implements ClusterManager {
       } else {
         throw new VertxException("Timed out waiting to get lock " + name);
       }
-    }, handler);
+    }, false, handler);
   }
 
   @Override
