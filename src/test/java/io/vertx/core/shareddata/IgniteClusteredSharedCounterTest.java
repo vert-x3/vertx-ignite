@@ -15,7 +15,7 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.test.core;
+package io.vertx.core.shareddata;
 
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
@@ -23,7 +23,7 @@ import io.vertx.spi.cluster.ignite.IgniteClusterManager;
 /**
  * @author Andrey Gura
  */
-public class IgniteHATest extends HATest {
+public class IgniteClusteredSharedCounterTest extends ClusteredSharedCounterTest {
 
   @Override
   protected ClusterManager getClusterManager() {

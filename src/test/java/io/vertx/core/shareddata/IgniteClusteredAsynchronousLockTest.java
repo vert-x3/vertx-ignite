@@ -15,18 +15,30 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.test.core;
+package io.vertx.core.shareddata;
 
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
+import org.junit.Test;
 
 /**
  * @author Andrey Gura
  */
-public class IgniteClusteredEventbusTest extends ClusteredEventBusTest {
-
+public class IgniteClusteredAsynchronousLockTest extends ClusteredAsynchronousLockTest {
   @Override
   protected ClusterManager getClusterManager() {
     return new IgniteClusterManager();
+  }
+
+  @Test
+  @Override
+  public void testLockReleasedForClosedNode() throws Exception {
+    super.testLockReleasedForClosedNode();
+  }
+
+  @Test
+  @Override
+  public void testLockReleasedForKilledNode() throws Exception {
+    super.testLockReleasedForKilledNode();
   }
 }
