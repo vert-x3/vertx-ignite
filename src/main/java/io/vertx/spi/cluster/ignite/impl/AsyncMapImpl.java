@@ -18,6 +18,7 @@
 package io.vertx.spi.cluster.ignite.impl;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -156,7 +157,8 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
         cache.withExpiryPolicy(new CreatedExpiryPolicy(new Duration(TimeUnit.MILLISECONDS, ttl))) : cache;
 
       IgniteFuture<T> future = cacheOp.apply(cache0);
-      future.listen(fut -> vertx.executeBlocking(
+      Context context = vertx.getOrCreateContext();
+      future.listen(fut -> context.executeBlocking(
         f -> f.complete(unmarshal(future.get())), handler)
       );
     } catch (Exception e) {
