@@ -20,6 +20,7 @@ package io.vertx.spi.cluster.ignite.impl;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.shareddata.AsyncMap;
 import org.apache.ignite.IgniteCache;
@@ -118,16 +119,16 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
 
   @Override
   public void keys(Handler<AsyncResult<Set<K>>> resultHandler) {
-    Future<Map<K, V>> entriesFuture = Future.future();
+    Promise<Map<K, V>> entriesFuture = Promise.promise();
     entries(entriesFuture);
-    entriesFuture.map(Map::keySet).setHandler(resultHandler);
+    entriesFuture.future().map(Map::keySet).setHandler(resultHandler);
   }
 
   @Override
   public void values(Handler<AsyncResult<List<V>>> resultHandler) {
-    Future<Map<K, V>> entriesFuture = Future.future();
+    Promise<Map<K, V>> entriesFuture = Promise.promise();
     entries(entriesFuture);
-    entriesFuture.<List<V>>map(map -> new ArrayList<>(map.values())).setHandler(resultHandler);
+    entriesFuture.future().<List<V>>map(map -> new ArrayList<>(map.values())).setHandler(resultHandler);
   }
 
   @Override
