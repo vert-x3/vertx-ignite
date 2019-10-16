@@ -285,7 +285,7 @@ public class IgniteClusterManager implements ClusterManager {
                       break;
                   }
                 }
-                fut.complete();
+                f.complete();
               }, null);
             }
 
