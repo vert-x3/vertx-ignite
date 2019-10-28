@@ -18,6 +18,7 @@
 package io.vertx.spi.cluster.ignite;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxException;
@@ -430,45 +431,80 @@ public class IgniteClusterManager implements ClusterManager {
     }
 
     @Override
+    public Future<Long> get() {
+      return vertx.executeBlocking(fut -> fut.complete(cnt.get()));
+    }
+
+    @Override
     public void get(Handler<AsyncResult<Long>> handler) {
       Objects.requireNonNull(handler, "handler");
-      vertx.executeBlocking(fut -> fut.complete(cnt.get()), handler);
+      get().setHandler(handler);
+    }
+
+    @Override
+    public Future<Long> incrementAndGet() {
+      return vertx.executeBlocking(fut -> fut.complete(cnt.incrementAndGet()));
     }
 
     @Override
     public void incrementAndGet(Handler<AsyncResult<Long>> handler) {
       Objects.requireNonNull(handler, "handler");
-      vertx.executeBlocking(fut -> fut.complete(cnt.incrementAndGet()), handler);
+      incrementAndGet().setHandler(handler);
+    }
+
+    @Override
+    public Future<Long> getAndIncrement() {
+      return vertx.executeBlocking(fut -> fut.complete(cnt.getAndIncrement()));
     }
 
     @Override
     public void getAndIncrement(Handler<AsyncResult<Long>> handler) {
       Objects.requireNonNull(handler, "handler");
-      vertx.executeBlocking(fut -> fut.complete(cnt.getAndIncrement()), handler);
+      getAndIncrement().setHandler(handler);
+    }
+
+    @Override
+    public Future<Long> decrementAndGet() {
+      return vertx.executeBlocking(fut -> fut.complete(cnt.decrementAndGet()));
     }
 
     @Override
     public void decrementAndGet(Handler<AsyncResult<Long>> handler) {
       Objects.requireNonNull(handler, "handler");
-      vertx.executeBlocking(fut -> fut.complete(cnt.decrementAndGet()), handler);
+      decrementAndGet().setHandler(handler);
+    }
+
+    @Override
+    public Future<Long> addAndGet(long value) {
+      return vertx.executeBlocking(fut -> fut.complete(cnt.addAndGet(value)));
     }
 
     @Override
     public void addAndGet(long value, Handler<AsyncResult<Long>> handler) {
       Objects.requireNonNull(handler, "handler");
-      vertx.executeBlocking(fut -> fut.complete(cnt.addAndGet(value)), handler);
+      addAndGet(value).setHandler(handler);
+    }
+
+    @Override
+    public Future<Long> getAndAdd(long value) {
+      return vertx.executeBlocking(fut -> fut.complete(cnt.getAndAdd(value)));
     }
 
     @Override
     public void getAndAdd(long value, Handler<AsyncResult<Long>> handler) {
       Objects.requireNonNull(handler, "handler");
-      vertx.executeBlocking(fut -> fut.complete(cnt.getAndAdd(value)), handler);
+      getAndAdd(value).setHandler(handler);
+    }
+
+    @Override
+    public Future<Boolean> compareAndSet(long expected, long value) {
+      return vertx.executeBlocking(fut -> fut.complete(cnt.compareAndSet(expected, value)));
     }
 
     @Override
     public void compareAndSet(long expected, long value, Handler<AsyncResult<Boolean>> handler) {
       Objects.requireNonNull(handler, "handler");
-      vertx.executeBlocking(fut -> fut.complete(cnt.compareAndSet(expected, value)), handler);
+      compareAndSet(expected, value).setHandler(handler);
     }
   }
 
