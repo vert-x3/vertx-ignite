@@ -177,10 +177,8 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   @Override
-  public <K, V> void getAsyncMap(String name, Handler<AsyncResult<AsyncMap<K, V>>> handler) {
-    vertx.executeBlocking(
-      fut -> fut.complete(new AsyncMapImpl<>(getCache(name), vertx)), handler
-    );
+  public <K, V> Future<AsyncMap<K, V>> getAsyncMap(String name) {
+    return vertx.executeBlocking(fut -> fut.complete(new AsyncMapImpl<>(getCache(name), vertx)));
   }
 
   @Override
@@ -189,8 +187,8 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   @Override
-  public void getLockWithTimeout(String name, long timeout, Handler<AsyncResult<Lock>> handler) {
-    vertx.executeBlocking(fut -> {
+  public Future<Lock> getLockWithTimeout(String name, long timeout) {
+    return vertx.executeBlocking(fut -> {
       boolean locked;
 
       try {
@@ -222,12 +220,12 @@ public class IgniteClusterManager implements ClusterManager {
       } else {
         throw new VertxException("Timed out waiting to get lock " + name);
       }
-    }, false, handler);
+    }, false);
   }
 
   @Override
-  public void getCounter(String name, Handler<AsyncResult<Counter>> handler) {
-    vertx.executeBlocking(fut -> fut.complete(new CounterImpl(ignite.atomicLong(name, 0, true))), handler);
+  public Future<Counter> getCounter(String name) {
+    return vertx.executeBlocking(fut -> fut.complete(new CounterImpl(ignite.atomicLong(name, 0, true))));
   }
 
   @Override
