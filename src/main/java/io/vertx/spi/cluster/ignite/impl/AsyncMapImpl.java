@@ -22,6 +22,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.impl.ContextInternal;
+import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.shareddata.AsyncMap;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.ScanQuery;
@@ -63,105 +65,107 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
   }
 
   @Override
-  public void get(K key, Handler<AsyncResult<V>> handler) {
-    execute(cache -> cache.getAsync(marshal(key)), handler);
+  public Future<V> get(K k) {
+    return execute(cache -> cache.getAsync(marshal(k)));
   }
 
   @Override
-  public void put(K key, V value, Handler<AsyncResult<Void>> handler) {
-    execute(cache -> cache.putAsync(marshal(key), marshal(value)), handler);
+  public Future<Void> put(K k, V v) {
+    return execute(cache -> cache.putAsync(marshal(k), marshal(v)));
   }
 
   @Override
-  public void put(K key, V value, long ttl, Handler<AsyncResult<Void>> handler) {
-    executeWithTtl(cache -> cache.putAsync(marshal(key), marshal(value)), handler, ttl);
+  public Future<Void> put(K k, V v, long ttl) {
+    return executeWithTtl(cache -> cache.putAsync(marshal(k), marshal(v)), ttl);
   }
 
   @Override
-  public void putIfAbsent(K key, V value, Handler<AsyncResult<V>> handler) {
-    execute(cache -> cache.getAndPutIfAbsentAsync(marshal(key), marshal(value)), handler);
+  public Future<V> putIfAbsent(K k, V v) {
+    return execute(cache -> cache.getAndPutIfAbsentAsync(marshal(k), marshal(v)));
   }
 
   @Override
-  public void putIfAbsent(K key, V value, long ttl, Handler<AsyncResult<V>> handler) {
-    executeWithTtl(cache -> cache.getAndPutIfAbsentAsync(marshal(key), marshal(value)), handler, ttl);
+  public Future<V> putIfAbsent(K k, V v, long ttl) {
+    return executeWithTtl(cache -> cache.getAndPutIfAbsentAsync(marshal(k), marshal(v)), ttl);
   }
 
   @Override
-  public void remove(K key, Handler<AsyncResult<V>> handler) {
-    execute(cache -> cache.getAndRemoveAsync(marshal(key)), handler);
+  public Future<V> remove(K k) {
+    return execute(cache -> cache.getAndRemoveAsync(marshal(k)));
   }
 
   @Override
-  public void removeIfPresent(K key, V value, Handler<AsyncResult<Boolean>> handler) {
-    execute(cache -> cache.removeAsync(marshal(key), marshal(value)), handler);
+  public Future<Boolean> removeIfPresent(K k, V v) {
+    return execute(cache -> cache.removeAsync(marshal(k), marshal(v)));
   }
 
   @Override
-  public void replace(K key, V value, Handler<AsyncResult<V>> handler) {
-    execute(cache -> cache.getAndReplaceAsync(marshal(key), marshal(value)), handler);
+  public Future<V> replace(K k, V v) {
+    return execute(cache -> cache.getAndReplaceAsync(marshal(k), marshal(v)));
   }
 
   @Override
-  public void replaceIfPresent(K key, V oldValue, V newValue, Handler<AsyncResult<Boolean>> handler) {
-    execute(cache -> cache.replaceAsync(marshal(key), marshal(oldValue), marshal(newValue)), handler);
+  public Future<Boolean> replaceIfPresent(K k, V oldValue, V newValue) {
+    return execute(cache -> cache.replaceAsync(marshal(k), marshal(oldValue), marshal(newValue)));
   }
 
   @Override
-  public void clear(Handler<AsyncResult<Void>> handler) {
-    execute(IgniteCache::clearAsync, handler);
+  public Future<Void> clear() {
+    return execute(IgniteCache::clearAsync);
   }
 
   @Override
-  public void size(Handler<AsyncResult<Integer>> handler) {
-    execute(IgniteCache::sizeAsync, handler);
+  public Future<Integer> size() {
+    return execute(IgniteCache::sizeAsync);
   }
 
   @Override
-  public void keys(Handler<AsyncResult<Set<K>>> resultHandler) {
-    Promise<Map<K, V>> entriesFuture = Promise.promise();
-    entries(entriesFuture);
-    entriesFuture.future().map(Map::keySet).setHandler(resultHandler);
+  public Future<Set<K>> keys() {
+    return entries().map(Map::keySet);
   }
 
   @Override
-  public void values(Handler<AsyncResult<List<V>>> resultHandler) {
-    Promise<Map<K, V>> entriesFuture = Promise.promise();
-    entries(entriesFuture);
-    entriesFuture.future().<List<V>>map(map -> new ArrayList<>(map.values())).setHandler(resultHandler);
+  public Future<List<V>> values() {
+    return entries().map(map -> new ArrayList<>(map.values()));
   }
 
   @Override
-  public void entries(Handler<AsyncResult<Map<K, V>>> resultHandler) {
-    vertx.executeBlocking(fut -> {
+  public Future<Map<K, V>> entries() {
+    return vertx.executeBlocking(fut -> {
       List<Cache.Entry<K, V>> all = cache.query(new ScanQuery<K, V>()).getAll();
       Map<K, V> map = new HashMap<>(all.size());
       for (Cache.Entry<K, V> entry : all) {
         map.put(unmarshal(entry.getKey()), unmarshal(entry.getValue()));
       }
       fut.complete(map);
-    }, resultHandler);
+    });
   }
 
-  private <T> void execute(Function<IgniteCache<K, V>, IgniteFuture<T>> cacheOp, Handler<AsyncResult<T>> handler) {
-    executeWithTtl(cacheOp, handler, -1);
+  private <T> Future<T> execute(Function<IgniteCache<K, V>, IgniteFuture<T>> cacheOp) {
+    return executeWithTtl(cacheOp, -1);
   }
 
   /**
    * @param ttl Time to live in ms.
    */
-  private <T> void executeWithTtl(Function<IgniteCache<K, V>, IgniteFuture<T>> cacheOp,
-    Handler<AsyncResult<T>> handler, long ttl) {
+  private <T> Future<T> executeWithTtl(Function<IgniteCache<K, V>, IgniteFuture<T>> cacheOp, long ttl) {
+    ContextInternal ctx = ((VertxInternal) vertx).getOrCreateContext();
+    Promise<T> promise = ctx.promise();
     try {
       IgniteCache<K, V> cache0 = ttl > 0 ?
         cache.withExpiryPolicy(new CreatedExpiryPolicy(new Duration(TimeUnit.MILLISECONDS, ttl))) : cache;
 
       IgniteFuture<T> future = cacheOp.apply(cache0);
-      future.listen(fut -> vertx.executeBlocking(
-        f -> f.complete(unmarshal(future.get())), handler)
+      future.listen(fut -> {
+        ctx.executeBlocking(
+          f -> {
+            f.complete(unmarshal(future.get()));
+          }, promise);
+        }
       );
     } catch (Exception e) {
-      handler.handle(Future.failedFuture(e));
+      promise.fail(e);
     }
+    return promise.future();
   }
 }
