@@ -32,12 +32,7 @@ import io.vertx.core.spi.cluster.NodeListener;
 import io.vertx.spi.cluster.ignite.impl.AsyncMapImpl;
 import io.vertx.spi.cluster.ignite.impl.AsyncMultiMapImpl;
 import io.vertx.spi.cluster.ignite.impl.MapImpl;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteAtomicLong;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteQueue;
-import org.apache.ignite.Ignition;
+import org.apache.ignite.*;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.CollectionConfiguration;
@@ -53,18 +48,14 @@ import javax.cache.expiry.ExpiryPolicy;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URL;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Queue;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static javax.cache.expiry.Duration.*;
+import static javax.cache.expiry.Duration.ETERNAL;
 import static org.apache.ignite.events.EventType.*;
 
 /**
@@ -106,6 +97,8 @@ public class IgniteClusterManager implements ClusterManager {
   private final Object monitor = new Object();
 
   private CollectionConfiguration collectionCfg;
+
+  private ExecutorService lockReleaseExec;
 
   /**
    * Default constructor. Cluster manager will get configuration from classpath.
@@ -247,6 +240,8 @@ public class IgniteClusterManager implements ClusterManager {
         if (!active) {
           active = true;
 
+          lockReleaseExec = Executors.newCachedThreadPool(r -> new Thread(r, "vertx-ignite-service-release-lock-thread"));
+
           if (!customIgnite) {
             ignite = cfg == null ? Ignition.start(loadConfiguration()) : Ignition.start(cfg);
           }
@@ -323,6 +318,7 @@ public class IgniteClusterManager implements ClusterManager {
       vertx.executeBlocking(fut -> {
         if (active) {
           active = false;
+          lockReleaseExec.shutdown();
           try {
             if (!customIgnite)
               ignite.close();
@@ -410,15 +406,14 @@ public class IgniteClusterManager implements ClusterManager {
 
     @Override
     public void release() {
-      vertx.executeBlocking(future -> {
+      lockReleaseExec.execute(() -> {
         IgniteQueue<String> queue = getQueue(name, true);
         String ownerId = queue.poll();
 
         if (ownerId == null) {
           throw new VertxException("Inconsistent lock state " + name);
         }
-        future.complete();
-      }, false, null);
+      });
     }
   }
 
