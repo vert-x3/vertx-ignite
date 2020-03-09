@@ -427,7 +427,7 @@ public class IgniteClusterManager implements ClusterManager {
     @Override
     public void get(Handler<AsyncResult<Long>> handler) {
       Objects.requireNonNull(handler, "handler");
-      get().setHandler(handler);
+      get().onComplete(handler);
     }
 
     @Override
@@ -438,7 +438,7 @@ public class IgniteClusterManager implements ClusterManager {
     @Override
     public void incrementAndGet(Handler<AsyncResult<Long>> handler) {
       Objects.requireNonNull(handler, "handler");
-      incrementAndGet().setHandler(handler);
+      incrementAndGet().onComplete(handler);
     }
 
     @Override
@@ -449,7 +449,7 @@ public class IgniteClusterManager implements ClusterManager {
     @Override
     public void getAndIncrement(Handler<AsyncResult<Long>> handler) {
       Objects.requireNonNull(handler, "handler");
-      getAndIncrement().setHandler(handler);
+      getAndIncrement().onComplete(handler);
     }
 
     @Override
@@ -460,7 +460,7 @@ public class IgniteClusterManager implements ClusterManager {
     @Override
     public void decrementAndGet(Handler<AsyncResult<Long>> handler) {
       Objects.requireNonNull(handler, "handler");
-      decrementAndGet().setHandler(handler);
+      decrementAndGet().onComplete(handler);
     }
 
     @Override
@@ -471,7 +471,7 @@ public class IgniteClusterManager implements ClusterManager {
     @Override
     public void addAndGet(long value, Handler<AsyncResult<Long>> handler) {
       Objects.requireNonNull(handler, "handler");
-      addAndGet(value).setHandler(handler);
+      addAndGet(value).onComplete(handler);
     }
 
     @Override
@@ -482,7 +482,7 @@ public class IgniteClusterManager implements ClusterManager {
     @Override
     public void getAndAdd(long value, Handler<AsyncResult<Long>> handler) {
       Objects.requireNonNull(handler, "handler");
-      getAndAdd(value).setHandler(handler);
+      getAndAdd(value).onComplete(handler);
     }
 
     @Override
@@ -493,7 +493,7 @@ public class IgniteClusterManager implements ClusterManager {
     @Override
     public void compareAndSet(long expected, long value, Handler<AsyncResult<Boolean>> handler) {
       Objects.requireNonNull(handler, "handler");
-      compareAndSet(expected, value).setHandler(handler);
+      compareAndSet(expected, value).onComplete(handler);
     }
   }
 
