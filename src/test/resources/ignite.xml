@@ -38,7 +38,7 @@
     <property name="cacheConfiguration">
       <list>
         <bean class="org.apache.ignite.configuration.CacheConfiguration">
-          <property name="name" value="*"/>
+          <property name="name" value="__vertx.*"/>
           <property name="cacheMode" value="PARTITIONED"/>
           <property name="backups" value="1"/>
           <property name="readFromBackup" value="false"/>
@@ -48,6 +48,13 @@
             </bean>
           </property>
           <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+        </bean>
+        <bean class="org.apache.ignite.configuration.CacheConfiguration">
+          <property name="name" value="*"/>
+          <property name="cacheMode" value="PARTITIONED"/>
+          <property name="backups" value="1"/>
+          <property name="readFromBackup" value="false"/>
+          <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>
         </bean>
       </list>
     </property>

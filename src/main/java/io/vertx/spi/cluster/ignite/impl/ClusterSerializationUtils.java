@@ -68,7 +68,7 @@ public class ClusterSerializationUtils {
   private static ClusterSerializable unmarshal0(ClusterSerializableValue value) {
     try {
       Class<?> cls = Thread.currentThread().getContextClassLoader().loadClass(value.getClassName());
-      ClusterSerializable obj = (ClusterSerializable) cls.newInstance();
+      ClusterSerializable obj = (ClusterSerializable) cls.getDeclaredConstructor().newInstance();
       obj.readFromBuffer(0, Buffer.buffer(value.getData()));
       return obj;
     } catch (Exception e) {

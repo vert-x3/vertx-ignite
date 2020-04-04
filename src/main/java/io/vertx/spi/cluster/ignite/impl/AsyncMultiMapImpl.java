@@ -33,7 +33,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import org.apache.ignite.Ignite;

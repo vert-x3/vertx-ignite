@@ -18,6 +18,7 @@
 package io.vertx.spi.cluster.ignite;
 
 import io.vertx.core.*;
+import io.vertx.core.Future;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
@@ -31,8 +32,6 @@ import io.vertx.spi.cluster.ignite.impl.AsyncMultiMapImpl;
 import io.vertx.spi.cluster.ignite.impl.MapImpl;
 import org.apache.ignite.*;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.CollectionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -46,12 +45,11 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URL;
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static javax.cache.expiry.Duration.ETERNAL;
 import static org.apache.ignite.events.EventType.*;
 
@@ -70,14 +68,12 @@ public class IgniteClusterManager implements ClusterManager {
   // User defined Ignite configuration file
   private static final String CONFIG_FILE = "ignite.xml";
 
-  public static final String VERTX_CACHE_TEMPLATE_NAME = "*";
-
   private static final String VERTX_NODE_PREFIX = "vertx.ignite.node.";
+
+  private static final String LOCK_SEMAPHORE_PREFIX = "__vertx.";
 
   // Workaround for https://github.com/vert-x3/vertx-ignite/issues/63
   private static final ExpiryPolicy DEFAULT_EXPIRY_POLICY = new ClearExpiryPolicy();
-
-  private final Queue<String> pendingLocks = new ConcurrentLinkedQueue<>();
 
   private Vertx vertx;
 
@@ -93,8 +89,6 @@ public class IgniteClusterManager implements ClusterManager {
 
   private final Object monitor = new Object();
 
-  private CollectionConfiguration collectionCfg;
-
   private ExecutorService lockReleaseExec;
 
   /**
@@ -102,7 +96,10 @@ public class IgniteClusterManager implements ClusterManager {
    */
   @SuppressWarnings("unused")
   public IgniteClusterManager() {
+    System.setProperty("IGNITE_NO_ASCII","true");
+    System.setProperty("IGNITE_QUIET","true");
     System.setProperty("IGNITE_NO_SHUTDOWN_HOOK", "true");
+    System.setProperty("IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED", "true");
   }
 
   /**
@@ -178,38 +175,20 @@ public class IgniteClusterManager implements ClusterManager {
   @Override
   public Future<Lock> getLockWithTimeout(String name, long timeout) {
     return vertx.executeBlocking(fut -> {
+      IgniteSemaphore semaphore = ignite.semaphore(LOCK_SEMAPHORE_PREFIX + name, 1, true, true);
       boolean locked;
-
-      try {
-        IgniteQueue<String> queue = getQueue(name, true);
-
-        pendingLocks.offer(name);
-
-        locked = queue.offer(getNodeID(), timeout, TimeUnit.MILLISECONDS);
-
-        if (!locked) {
-          // EVT_NODE_LEFT/EVT_NODE_FAILED event might be already handled, so trying get lock again if
-          // node left topology.
-          // Use IgniteSempahore when it will be fixed.
-          String ownerId = queue.peek();
-          ClusterNode ownerNode = ignite.cluster().forNodeId(UUID.fromString(ownerId)).node();
-          if (ownerNode == null) {
-            queue.remove(ownerId);
-            locked = queue.offer(getNodeID(), timeout, TimeUnit.MILLISECONDS);
-          }
-        }
-      } catch (Exception e) {
-        throw new VertxException("Error during getting lock " + name, e);
-      } finally {
-        pendingLocks.remove(name);
-      }
-
+      long remaining = timeout;
+      do {
+        long start = System.nanoTime();
+        locked = semaphore.tryAcquire(remaining, TimeUnit.MILLISECONDS);
+        remaining = remaining - TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, NANOSECONDS);
+      } while (!locked && remaining > 0);
       if (locked) {
-        fut.complete(new LockImpl(name));
+        fut.complete(new LockImpl(semaphore, lockReleaseExec));
       } else {
         throw new VertxException("Timed out waiting to get lock " + name);
       }
-    }, false);
+      }, false);
   }
 
   @Override
@@ -242,19 +221,6 @@ public class IgniteClusterManager implements ClusterManager {
           }
           nodeID = nodeId(ignite.cluster().localNode());
 
-          for (CacheConfiguration cacheCfg : ignite.configuration().getCacheConfiguration()) {
-            if (cacheCfg.getName().equals(VERTX_CACHE_TEMPLATE_NAME)) {
-              collectionCfg = new CollectionConfiguration();
-              collectionCfg.setAtomicityMode(cacheCfg.getAtomicityMode());
-              collectionCfg.setBackups(cacheCfg.getBackups());
-              break;
-            }
-          }
-
-          if (collectionCfg == null) {
-            collectionCfg = new CollectionConfiguration();
-          }
-
           eventListener = event -> {
             if (!active) {
               return false;
@@ -271,7 +237,6 @@ public class IgniteClusterManager implements ClusterManager {
                     case EVT_NODE_FAILED:
                       String nodeId = nodeId(((DiscoveryEvent)event).eventNode());
                       nodeListener.nodeLeft(nodeId);
-                      releasePendingLocksForFailedNode(nodeId);
                       break;
                   }
                 }
@@ -288,23 +253,6 @@ public class IgniteClusterManager implements ClusterManager {
         }
       }, handler);
     }
-  }
-
-  /**
-   * @param nodeId ID of node that left topology
-   */
-  private void releasePendingLocksForFailedNode(final String nodeId) {
-    Set<String> processed = new HashSet<>();
-
-    pendingLocks.forEach(name -> {
-      if (processed.add(name)) {
-        IgniteQueue<String> queue = getQueue(name, false);
-
-        if (queue != null && nodeId.equals(queue.peek())) {
-          queue.remove(nodeId);
-        }
-      }
-    });
   }
 
   @Override
@@ -384,31 +332,25 @@ public class IgniteClusterManager implements ClusterManager {
     return cache.withExpiryPolicy(DEFAULT_EXPIRY_POLICY);
   }
 
-  private <T> IgniteQueue<T> getQueue(String name, boolean create) {
-    return ignite.queue(name, 1, create ? collectionCfg : null);
-  }
-
   private static String nodeId(ClusterNode node) {
     return node.id().toString();
   }
 
   private class LockImpl implements Lock {
-    private final String name;
+    private final IgniteSemaphore semaphore;
+    private final Executor lockReleaseExec;
+    private final AtomicBoolean released = new AtomicBoolean();
 
-    private LockImpl(String name) {
-      this.name = name;
+    private LockImpl(IgniteSemaphore semaphore, Executor lockReleaseExec) {
+      this.semaphore = semaphore;
+      this.lockReleaseExec = lockReleaseExec;
     }
 
     @Override
     public void release() {
-      lockReleaseExec.execute(() -> {
-        IgniteQueue<String> queue = getQueue(name, true);
-        String ownerId = queue.poll();
-
-        if (ownerId == null) {
-          throw new VertxException("Inconsistent lock state " + name);
-        }
-      });
+      if (released.compareAndSet(false, true)) {
+        lockReleaseExec.execute(semaphore::release);
+      }
     }
   }
 

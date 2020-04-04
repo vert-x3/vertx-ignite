@@ -102,7 +102,7 @@ public class MapImpl<K, V> implements Map<K, V> {
   public void putAll(Map<? extends K, ? extends V> map) {
     Map<K, V> map0 = new HashMap<>();
 
-    for (Entry<K, V> entry : map0.entrySet()) {
+    for (Entry<? extends K, ? extends V> entry : map.entrySet()) {
       map0.put(marshal(entry.getKey()), marshal(entry.getValue()));
     }
 
