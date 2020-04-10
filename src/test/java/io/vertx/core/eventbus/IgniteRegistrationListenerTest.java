@@ -15,18 +15,27 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.vertx.core.shareddata;
+package io.vertx.core.eventbus;
 
+import io.vertx.Lifecycle;
+import io.vertx.core.Vertx;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
 
+import java.util.List;
+
 /**
- * @author Andrey Gura
+ * @author Lukas Prettenthaler
  */
-public class IgniteAsyncMultiMapTest extends AsyncMultiMapTest {
+public class IgniteRegistrationListenerTest extends RegistrationListenerTest {
 
   @Override
   protected ClusterManager getClusterManager() {
     return new IgniteClusterManager();
+  }
+
+  @Override
+  protected void closeClustered(List<Vertx> clustered) throws Exception {
+    Lifecycle.closeClustered(clustered);
   }
 }

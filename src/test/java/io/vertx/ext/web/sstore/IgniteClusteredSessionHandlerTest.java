@@ -16,8 +16,12 @@
 
 package io.vertx.ext.web.sstore;
 
+import io.vertx.Lifecycle;
+import io.vertx.core.Vertx;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
+
+import java.util.List;
 
 /**
  * @author Thomas Segismont
@@ -27,5 +31,10 @@ public class IgniteClusteredSessionHandlerTest extends ClusteredSessionHandlerTe
   @Override
   protected ClusterManager getClusterManager() {
     return new IgniteClusterManager();
+  }
+
+  @Override
+  protected void closeClustered(List<Vertx> clustered) throws Exception {
+    Lifecycle.closeClustered(clustered);
   }
 }

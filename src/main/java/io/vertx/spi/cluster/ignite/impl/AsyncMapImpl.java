@@ -20,10 +20,12 @@ package io.vertx.spi.cluster.ignite.impl;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxException;
 import io.vertx.core.impl.ContextInternal;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.shareddata.AsyncMap;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.lang.IgniteFuture;
 
@@ -48,7 +50,7 @@ import static io.vertx.spi.cluster.ignite.impl.ClusterSerializationUtils.unmarsh
  */
 public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
 
-  private final Vertx vertx;
+  private final VertxInternal vertx;
   private final IgniteCache<K, V> cache;
 
   /**
@@ -57,7 +59,7 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
    * @param cache {@link IgniteCache} instance.
    * @param vertx {@link Vertx} instance.
    */
-  public AsyncMapImpl(IgniteCache<K, V> cache, Vertx vertx) {
+  public AsyncMapImpl(IgniteCache<K, V> cache, VertxInternal vertx) {
     this.cache = cache;
     this.vertx = vertx;
   }
@@ -147,23 +149,19 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
    * @param ttl Time to live in ms.
    */
   private <T> Future<T> executeWithTtl(Function<IgniteCache<K, V>, IgniteFuture<T>> cacheOp, long ttl) {
-    ContextInternal ctx = ((VertxInternal) vertx).getOrCreateContext();
+    ContextInternal ctx = vertx.getOrCreateContext();
     Promise<T> promise = ctx.promise();
-    try {
-      IgniteCache<K, V> cache0 = ttl > 0 ?
-        cache.withExpiryPolicy(new CreatedExpiryPolicy(new Duration(TimeUnit.MILLISECONDS, ttl))) : cache;
+    IgniteCache<K, V> cache0 = ttl > 0 ?
+      cache.withExpiryPolicy(new CreatedExpiryPolicy(new Duration(TimeUnit.MILLISECONDS, ttl))) : cache;
 
-      IgniteFuture<T> future = cacheOp.apply(cache0);
-      future.listen(fut -> {
-        ctx.executeBlocking(
-          f -> {
-            f.complete(unmarshal(future.get()));
-          }, promise);
-        }
-      );
-    } catch (Exception e) {
-      promise.fail(e);
-    }
+    IgniteFuture<T> future = cacheOp.apply(cache0);
+    future.listen(fut -> {
+      try {
+        promise.complete(unmarshal(future.get()));
+      } catch (IgniteException e) {
+        promise.fail(new VertxException(e));
+      }
+    });
     return promise.future();
   }
 }

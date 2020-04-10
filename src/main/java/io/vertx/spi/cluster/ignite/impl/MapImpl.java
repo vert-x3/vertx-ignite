@@ -18,6 +18,7 @@
 package io.vertx.spi.cluster.ignite.impl;
 
 import java.util.HashMap;
+
 import org.apache.ignite.IgniteCache;
 
 import javax.cache.Cache;
@@ -139,11 +140,9 @@ public class MapImpl<K, V> implements Map<K, V> {
   @Override
   public Set<Entry<K, V>> entrySet() {
     Set<Entry<K, V>> res = new HashSet<>();
-
     for (Cache.Entry<K, V> entry : cache) {
       res.add(new AbstractMap.SimpleImmutableEntry<>(unmarshal(entry.getKey()), unmarshal(entry.getValue())));
     }
-
     return res;
   }
 

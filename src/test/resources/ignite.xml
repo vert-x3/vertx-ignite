@@ -39,14 +39,9 @@
       <list>
         <bean class="org.apache.ignite.configuration.CacheConfiguration">
           <property name="name" value="__vertx.*"/>
-          <property name="cacheMode" value="PARTITIONED"/>
-          <property name="backups" value="1"/>
+          <property name="cacheMode" value="REPLICATED"/>
           <property name="readFromBackup" value="false"/>
-          <property name="affinity">
-            <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">
-              <property name="partitions" value="128"/>
-            </bean>
-          </property>
+          <property name="atomicityMode" value="ATOMIC"/>
           <property name="writeSynchronizationMode" value="FULL_SYNC"/>
         </bean>
         <bean class="org.apache.ignite.configuration.CacheConfiguration">
@@ -54,17 +49,23 @@
           <property name="cacheMode" value="PARTITIONED"/>
           <property name="backups" value="1"/>
           <property name="readFromBackup" value="false"/>
-          <property name="writeSynchronizationMode" value="PRIMARY_SYNC"/>
+          <property name="atomicityMode" value="ATOMIC"/>
+          <property name="affinity">
+            <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">
+              <property name="partitions" value="128"/>
+            </bean>
+          </property>
+          <property name="writeSynchronizationMode" value="FULL_SYNC"/>
         </bean>
       </list>
     </property>
 
-    <property name="includeEventTypes">
-      <list>
-        <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED"/>
-      </list>
-    </property>
-
+  <property name="includeEventTypes">
+    <list>
+      <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_PUT"/>
+      <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED"/>
+    </list>
+  </property>
 
     <!-- Logging configuration. -->
     <property name="gridLogger">

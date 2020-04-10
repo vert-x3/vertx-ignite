@@ -17,16 +17,32 @@
 
 package io.vertx.core.eventbus;
 
+import io.vertx.Lifecycle;
+import io.vertx.core.Vertx;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
+
+import java.util.List;
 
 /**
  * @author Andrey Gura
  */
-public class IgniteClusterFaultToleranceTest extends FaultToleranceTest {
+public class IgniteFaultToleranceTest extends FaultToleranceTest {
 
   @Override
   protected ClusterManager getClusterManager() {
     return new IgniteClusterManager();
+  }
+
+  @Override
+  protected void afterNodesKilled() throws Exception {
+    super.afterNodesKilled();
+    // Additional wait to make sure all nodes noticed the shutdowns
+    Thread.sleep(5_000);
+  }
+
+  @Override
+  protected void closeClustered(List<Vertx> clustered) throws Exception {
+    Lifecycle.closeClustered(clustered);
   }
 }
