@@ -13,28 +13,30 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.vertx.core.eventbus;
+package io.vertx.servicediscovery.impl;
 
-import io.vertx.Lifecycle;
 import io.vertx.core.Vertx;
-import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.core.VertxOptions;
+import io.vertx.servicediscovery.ServiceDiscoveryOptions;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
+import org.junit.Before;
 
-import java.util.List;
+import static com.jayway.awaitility.Awaitility.await;
 
 /**
  * @author Thomas Segismont
  * @author Lukas Prettenthaler
  */
-public class IgniteRegistrationListenerTest extends RegistrationListenerTest {
+public class IgniteDiscoveryImplClusteredTest extends DiscoveryImplTestBase {
 
-  @Override
-  protected ClusterManager getClusterManager() {
-    return new IgniteClusterManager();
-  }
-
-  @Override
-  protected void closeClustered(List<Vertx> clustered) throws Exception {
-    Lifecycle.closeClustered(clustered);
+  @Before
+  public void setUp() {
+    VertxOptions options = new VertxOptions()
+      .setClusterManager(new IgniteClusterManager());
+    Vertx.clusteredVertx(options, ar -> {
+      vertx = ar.result();
+    });
+    await().until(() -> vertx != null);
+    discovery = new DiscoveryImpl(vertx, new ServiceDiscoveryOptions());
   }
 }
