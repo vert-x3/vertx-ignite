@@ -39,20 +39,20 @@ public class IgniteRegistrationInfo implements Binarylizable {
     this.registrationInfo = Objects.requireNonNull(registrationInfo);
   }
 
-  public String getAddress() {
+  public String address() {
     return address;
   }
 
-  public RegistrationInfo getRegistrationInfo() {
+  public RegistrationInfo registrationInfo() {
     return registrationInfo;
   }
 
   @Override
   public void writeBinary(BinaryWriter writer) throws BinaryObjectException {
     writer.writeString("address", address);
-    writer.writeString("nodeId", registrationInfo.getNodeId());
-    writer.writeLong("seq", registrationInfo.getSeq());
-    writer.writeBoolean("isLocalOnly", registrationInfo.isLocalOnly());
+    writer.writeString("nodeId", registrationInfo.nodeId());
+    writer.writeLong("seq", registrationInfo.seq());
+    writer.writeBoolean("isLocalOnly", registrationInfo.localOnly());
   }
 
   @Override

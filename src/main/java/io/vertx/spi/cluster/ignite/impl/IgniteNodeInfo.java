@@ -17,7 +17,6 @@ package io.vertx.spi.cluster.ignite.impl;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.spi.cluster.NodeAddress;
 import io.vertx.core.spi.cluster.NodeInfo;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryReader;
@@ -40,17 +39,18 @@ public class IgniteNodeInfo implements Binarylizable {
 
   @Override
   public void writeBinary(BinaryWriter writer) throws BinaryObjectException {
-    writer.writeString("host", nodeInfo.getAddress().getHost());
-    writer.writeInt("port", nodeInfo.getAddress().getPort());
-    JsonObject metadata = nodeInfo.getMetadata();
+    writer.writeString("host", nodeInfo.host());
+    writer.writeInt("port", nodeInfo.port());
+    JsonObject metadata = nodeInfo.metadata();
     writer.writeByteArray("meta", metadata != null ? metadata.toBuffer().getBytes() : null);
   }
 
   @Override
   public void readBinary(BinaryReader reader) throws BinaryObjectException {
-    NodeAddress address = new NodeAddress(reader.readString("host"), reader.readInt("port"));
+    String host = reader.readString("host");
+    int port = reader.readInt("port");
     byte[] bytes = reader.readByteArray("meta");
-    nodeInfo = new NodeInfo(address, bytes != null ? new JsonObject(Buffer.buffer(bytes)) : null);
+    nodeInfo = new NodeInfo(host, port, bytes != null ? new JsonObject(Buffer.buffer(bytes)) : null);
   }
 
   public NodeInfo unwrap() {
