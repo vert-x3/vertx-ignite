@@ -17,14 +17,24 @@
 
 package io.vertx.core.shareddata;
 
+import io.vertx.Lifecycle;
+import io.vertx.LoggingTestWatcher;
+import io.vertx.core.Vertx;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
+import org.junit.Rule;
 import org.junit.Test;
+
+import java.util.List;
 
 /**
  * @author Andrey Gura
  */
 public class IgniteClusteredAsynchronousLockTest extends ClusteredAsynchronousLockTest {
+
+  @Rule
+  public LoggingTestWatcher watchman = new LoggingTestWatcher();
+
   @Override
   protected ClusterManager getClusterManager() {
     return new IgniteClusterManager();
@@ -40,5 +50,10 @@ public class IgniteClusteredAsynchronousLockTest extends ClusteredAsynchronousLo
   @Override
   public void testLockReleasedForKilledNode() throws Exception {
     super.testLockReleasedForKilledNode();
+  }
+
+  @Override
+  protected void closeClustered(List<Vertx> clustered) throws Exception {
+    Lifecycle.closeClustered(clustered);
   }
 }

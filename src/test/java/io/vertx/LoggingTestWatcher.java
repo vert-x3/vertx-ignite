@@ -14,32 +14,18 @@
  * under the License.
  */
 
-package io.vertx.ext.web.sstore;
+package io.vertx;
 
-import io.vertx.Lifecycle;
-import io.vertx.LoggingTestWatcher;
-import io.vertx.core.Vertx;
-import io.vertx.core.spi.cluster.ClusterManager;
-import io.vertx.spi.cluster.ignite.IgniteClusterManager;
-import org.junit.Rule;
-
-import java.util.List;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 
 /**
  * @author Thomas Segismont
  */
-public class IgniteClusteredSessionHandlerTest extends ClusteredSessionHandlerTest {
-
-  @Rule
-  public LoggingTestWatcher watchman = new LoggingTestWatcher();
+public class LoggingTestWatcher extends TestWatcher {
 
   @Override
-  protected ClusterManager getClusterManager() {
-    return new IgniteClusterManager();
-  }
-
-  @Override
-  protected void closeClustered(List<Vertx> clustered) throws Exception {
-    Lifecycle.closeClustered(clustered);
+  protected void starting(Description description) {
+    System.out.printf("Running %s#%s %s", description.getClassName(), description.getMethodName(), System.getProperty("line.separator"));
   }
 }

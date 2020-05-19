@@ -17,16 +17,29 @@
 
 package io.vertx.core;
 
+import io.vertx.Lifecycle;
+import io.vertx.LoggingTestWatcher;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
+import org.junit.Rule;
+
+import java.util.List;
 
 /**
  * @author Andrey Gura
  */
 public class IgniteComplexHATest extends ComplexHATest {
 
+  @Rule
+  public LoggingTestWatcher watchman = new LoggingTestWatcher();
+
   @Override
   protected ClusterManager getClusterManager() {
     return new IgniteClusterManager();
+  }
+
+  @Override
+  protected void closeClustered(List<Vertx> clustered) throws Exception {
+    Lifecycle.closeClustered(clustered);
   }
 }

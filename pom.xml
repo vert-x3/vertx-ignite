@@ -15,7 +15,7 @@
 
   <properties>
     <stack.version>4.0.0-SNAPSHOT</stack.version>
-    <ignite.version>2.7.6</ignite.version>
+    <ignite.version>2.8.0</ignite.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
   </properties>
 
@@ -46,6 +46,10 @@
       <artifactId>ignite-spring</artifactId>
       <version>${ignite.version}</version>
       <exclusions>
+        <exclusion>
+          <groupId>org.apache.ignite</groupId>
+          <artifactId>ignite-indexing</artifactId>
+        </exclusion>
         <exclusion>
           <groupId>org.springframework</groupId>
           <artifactId>spring-aop</artifactId>
@@ -113,6 +117,35 @@
       <version>1.1.7</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-service-discovery</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-service-proxy</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-service-discovery</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <version>3.3.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.jayway.awaitility</groupId>
+      <artifactId>awaitility</artifactId>
+      <version>1.7.0</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -126,6 +159,9 @@
             <systemPropertyVariables>
               <java.net.preferIPv4Stack>true</java.net.preferIPv4Stack>
               <IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED>true</IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED>
+              <IGNITE_NO_ASCII>true</IGNITE_NO_ASCII>
+              <IGNITE_QUIET>true</IGNITE_QUIET>
+              <IGNITE_UPDATE_NOTIFIER>false</IGNITE_UPDATE_NOTIFIER>
               <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.SLF4JLogDelegateFactory</vertx.logger-delegate-factory-class-name>
               <io.netty.leakDetectionLevel>PARANOID</io.netty.leakDetectionLevel>
               <buildDirectory>${project.build.directory}</buildDirectory>

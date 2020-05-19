@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Red Hat, Inc.
+ * Copyright 2020 Red Hat, Inc.
  *
  * Red Hat licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -13,33 +13,35 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.vertx.servicediscovery.impl;
 
-package io.vertx.ext.web.sstore;
-
-import io.vertx.Lifecycle;
 import io.vertx.LoggingTestWatcher;
 import io.vertx.core.Vertx;
-import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.core.VertxOptions;
+import io.vertx.servicediscovery.ServiceDiscoveryOptions;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
+import org.junit.Before;
 import org.junit.Rule;
 
-import java.util.List;
+import static com.jayway.awaitility.Awaitility.await;
 
 /**
  * @author Thomas Segismont
+ * @author Lukas Prettenthaler
  */
-public class IgniteClusteredSessionHandlerTest extends ClusteredSessionHandlerTest {
+public class IgniteDiscoveryImplClusteredTest extends DiscoveryImplTestBase {
 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();
 
-  @Override
-  protected ClusterManager getClusterManager() {
-    return new IgniteClusterManager();
-  }
-
-  @Override
-  protected void closeClustered(List<Vertx> clustered) throws Exception {
-    Lifecycle.closeClustered(clustered);
+  @Before
+  public void setUp() {
+    VertxOptions options = new VertxOptions()
+      .setClusterManager(new IgniteClusterManager());
+    Vertx.clusteredVertx(options, ar -> {
+      vertx = ar.result();
+    });
+    await().until(() -> vertx != null);
+    discovery = new DiscoveryImpl(vertx, new ServiceDiscoveryOptions());
   }
 }

@@ -18,21 +18,19 @@
 package io.vertx.spi.cluster.ignite;
 
 import io.vertx.core.*;
+import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.shareddata.Counter;
 import io.vertx.core.shareddata.Lock;
-import io.vertx.core.spi.cluster.AsyncMultiMap;
-import io.vertx.core.spi.cluster.ClusterManager;
-import io.vertx.core.spi.cluster.NodeListener;
+import io.vertx.core.spi.cluster.*;
 import io.vertx.spi.cluster.ignite.impl.AsyncMapImpl;
-import io.vertx.spi.cluster.ignite.impl.AsyncMultiMapImpl;
+import io.vertx.spi.cluster.ignite.impl.IgniteNodeInfo;
 import io.vertx.spi.cluster.ignite.impl.MapImpl;
+import io.vertx.spi.cluster.ignite.impl.SubsMapHelper;
 import org.apache.ignite.*;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.CollectionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -40,18 +38,21 @@ import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgnitePredicate;
 
+import javax.cache.CacheException;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URL;
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static javax.cache.expiry.Duration.ETERNAL;
 import static org.apache.ignite.events.EventType.*;
 
@@ -70,30 +71,30 @@ public class IgniteClusterManager implements ClusterManager {
   // User defined Ignite configuration file
   private static final String CONFIG_FILE = "ignite.xml";
 
-  public static final String VERTX_CACHE_TEMPLATE_NAME = "*";
-
   private static final String VERTX_NODE_PREFIX = "vertx.ignite.node.";
+
+  private static final String LOCK_SEMAPHORE_PREFIX = "__vertx.";
 
   // Workaround for https://github.com/vert-x3/vertx-ignite/issues/63
   private static final ExpiryPolicy DEFAULT_EXPIRY_POLICY = new ClearExpiryPolicy();
 
-  private final Queue<String> pendingLocks = new ConcurrentLinkedQueue<>();
-
-  private Vertx vertx;
+  private VertxInternal vertx;
+  private NodeSelector nodeSelector;
 
   private IgniteConfiguration cfg;
   private Ignite ignite;
   private boolean customIgnite;
 
-  private String nodeID = UUID.randomUUID().toString();
+  private String nodeId;
+  private NodeInfo nodeInfo;
+  private IgniteCache<String, IgniteNodeInfo> nodeInfoMap;
+  private SubsMapHelper subsMapHelper;
   private NodeListener nodeListener;
   private IgnitePredicate<Event> eventListener;
 
   private volatile boolean active;
 
   private final Object monitor = new Object();
-
-  private CollectionConfiguration collectionCfg;
 
   private ExecutorService lockReleaseExec;
 
@@ -114,7 +115,7 @@ public class IgniteClusterManager implements ClusterManager {
   @SuppressWarnings("unused")
   public IgniteClusterManager(IgniteConfiguration cfg) {
     this.cfg = cfg;
-    setNodeID(cfg);
+    setNodeId(cfg);
   }
 
   /**
@@ -149,8 +150,9 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   @Override
-  public void setVertx(Vertx vertx) {
-    this.vertx = vertx;
+  public void init(Vertx vertx, NodeSelector nodeSelector) {
+    this.vertx = (VertxInternal) vertx;
+    this.nodeSelector = nodeSelector;
   }
 
   @Override
@@ -159,15 +161,8 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   @Override
-  public <K, V> void getAsyncMultiMap(String name, Handler<AsyncResult<AsyncMultiMap<K, V>>> handler) {
-    vertx.executeBlocking(
-      fut -> fut.complete(new AsyncMultiMapImpl<>(this.<K, Set<V>>getCache(name), vertx)), handler
-    );
-  }
-
-  @Override
-  public <K, V> Future<AsyncMap<K, V>> getAsyncMap(String name) {
-    return vertx.executeBlocking(fut -> fut.complete(new AsyncMapImpl<>(getCache(name), vertx)));
+  public <K, V> void getAsyncMap(String name, Promise<AsyncMap<K, V>> promise) {
+    vertx.executeBlocking(prom -> prom.complete(new AsyncMapImpl<>(getCache(name), vertx)), promise);
   }
 
   @Override
@@ -176,62 +171,78 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   @Override
-  public Future<Lock> getLockWithTimeout(String name, long timeout) {
-    return vertx.executeBlocking(fut -> {
+  public void getLockWithTimeout(String name, long timeout, Promise<Lock> promise) {
+    vertx.executeBlocking(prom -> {
+      IgniteSemaphore semaphore = ignite.semaphore(LOCK_SEMAPHORE_PREFIX + name, 1, true, true);
       boolean locked;
-
-      try {
-        IgniteQueue<String> queue = getQueue(name, true);
-
-        pendingLocks.offer(name);
-
-        locked = queue.offer(getNodeID(), timeout, TimeUnit.MILLISECONDS);
-
-        if (!locked) {
-          // EVT_NODE_LEFT/EVT_NODE_FAILED event might be already handled, so trying get lock again if
-          // node left topology.
-          // Use IgniteSempahore when it will be fixed.
-          String ownerId = queue.peek();
-          ClusterNode ownerNode = ignite.cluster().forNodeId(UUID.fromString(ownerId)).node();
-          if (ownerNode == null) {
-            queue.remove(ownerId);
-            locked = queue.offer(getNodeID(), timeout, TimeUnit.MILLISECONDS);
-          }
-        }
-      } catch (Exception e) {
-        throw new VertxException("Error during getting lock " + name, e);
-      } finally {
-        pendingLocks.remove(name);
-      }
-
+      long remaining = timeout;
+      do {
+        long start = System.nanoTime();
+        locked = semaphore.tryAcquire(remaining, TimeUnit.MILLISECONDS);
+        remaining = remaining - TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, NANOSECONDS);
+      } while (!locked && remaining > 0);
       if (locked) {
-        fut.complete(new LockImpl(name));
+        prom.complete(new LockImpl(semaphore, lockReleaseExec));
       } else {
         throw new VertxException("Timed out waiting to get lock " + name);
       }
-    }, false);
+    }, false, promise);
   }
 
   @Override
-  public Future<Counter> getCounter(String name) {
-    return vertx.executeBlocking(fut -> fut.complete(new CounterImpl(ignite.atomicLong(name, 0, true))));
+  public void getCounter(String name, Promise<Counter> promise) {
+    vertx.executeBlocking(prom -> prom.complete(new CounterImpl(ignite.atomicLong(name, 0, true))), promise);
   }
 
   @Override
-  public String getNodeID() {
-    return nodeID;
+  public String getNodeId() {
+    return nodeId;
+  }
+
+  @Override
+  public void setNodeInfo(NodeInfo nodeInfo, Promise<Void> promise) {
+    synchronized (this) {
+      this.nodeInfo = nodeInfo;
+    }
+    IgniteNodeInfo value = new IgniteNodeInfo(nodeInfo);
+    vertx.executeBlocking(prom -> {
+      nodeInfoMap.put(nodeId, value);
+      prom.complete();
+    }, false, promise);
+  }
+
+  @Override
+  public synchronized NodeInfo getNodeInfo() {
+    return nodeInfo;
+  }
+
+  @Override
+  public void getNodeInfo(String id, Promise<NodeInfo> promise) {
+    nodeInfoMap.getAsync(id).listen(fut -> {
+      try {
+        IgniteNodeInfo value = fut.get();
+        promise.complete(value != null ? value.unwrap() : null);
+      } catch (IgniteException e) {
+        promise.fail(e);
+      }
+    });
   }
 
   @Override
   public List<String> getNodes() {
-    return ignite.cluster().nodes().stream()
-      .map(IgniteClusterManager::nodeId).collect(Collectors.toList());
+    try {
+      return ignite.cluster().nodes().stream()
+        .map(IgniteClusterManager::nodeId).collect(Collectors.toList());
+    } catch (IllegalStateException e) {
+      log.debug(e.getMessage());
+      return Collections.emptyList();
+    }
   }
 
   @Override
-  public void join(Handler<AsyncResult<Void>> handler) {
-    synchronized (monitor) {
-      vertx.executeBlocking(fut -> {
+  public void join(Promise<Void> promise) {
+    vertx.executeBlocking(prom -> {
+      synchronized (monitor) {
         if (!active) {
           active = true;
 
@@ -240,93 +251,74 @@ public class IgniteClusterManager implements ClusterManager {
           if (!customIgnite) {
             ignite = cfg == null ? Ignition.start(loadConfiguration()) : Ignition.start(cfg);
           }
-          nodeID = nodeId(ignite.cluster().localNode());
-
-          for (CacheConfiguration cacheCfg : ignite.configuration().getCacheConfiguration()) {
-            if (cacheCfg.getName().equals(VERTX_CACHE_TEMPLATE_NAME)) {
-              collectionCfg = new CollectionConfiguration();
-              collectionCfg.setAtomicityMode(cacheCfg.getAtomicityMode());
-              collectionCfg.setBackups(cacheCfg.getBackups());
-              break;
-            }
-          }
-
-          if (collectionCfg == null) {
-            collectionCfg = new CollectionConfiguration();
-          }
+          nodeId = nodeId(ignite.cluster().localNode());
 
           eventListener = event -> {
             if (!active) {
               return false;
             }
 
-            if (nodeListener != null) {
-              vertx.executeBlocking(f -> {
-                if (isActive()) {
-                  switch (event.type()) {
-                    case EVT_NODE_JOINED:
-                      nodeListener.nodeAdded(nodeId(((DiscoveryEvent)event).eventNode()));
-                      break;
-                    case EVT_NODE_LEFT:
-                    case EVT_NODE_FAILED:
-                      String nodeId = nodeId(((DiscoveryEvent)event).eventNode());
-                      nodeListener.nodeLeft(nodeId);
-                      releasePendingLocksForFailedNode(nodeId);
-                      break;
-                  }
+            vertx.executeBlocking(f -> {
+              if (isActive()) {
+                switch (event.type()) {
+                  case EVT_NODE_JOINED:
+                    if (nodeListener != null) {
+                      nodeListener.nodeAdded(nodeId(((DiscoveryEvent) event).eventNode()));
+                    }
+                    break;
+                  case EVT_NODE_LEFT:
+                  case EVT_NODE_FAILED:
+                    String id = nodeId(((DiscoveryEvent) event).eventNode());
+                    if (isMaster()) {
+                      cleanSubs(id);
+                      cleanNodeInfos(id);
+                    }
+                    if (nodeListener != null) {
+                      nodeListener.nodeLeft(id);
+                    }
+                    break;
                 }
-                f.complete();
-              }, null);
-            }
+              }
+              f.complete();
+            }, null);
 
             return true;
           };
 
           ignite.events().localListen(eventListener, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED);
+          subsMapHelper = new SubsMapHelper(ignite, nodeSelector);
+          nodeInfoMap = ignite.getOrCreateCache("__vertx.nodeInfo");
 
-          fut.complete();
-        }
-      }, handler);
-    }
-  }
-
-  /**
-   * @param nodeId ID of node that left topology
-   */
-  private void releasePendingLocksForFailedNode(final String nodeId) {
-    Set<String> processed = new HashSet<>();
-
-    pendingLocks.forEach(name -> {
-      if (processed.add(name)) {
-        IgniteQueue<String> queue = getQueue(name, false);
-
-        if (queue != null && nodeId.equals(queue.peek())) {
-          queue.remove(nodeId);
+          prom.complete();
         }
       }
-    });
+    }, promise);
   }
 
   @Override
-  public void leave(Handler<AsyncResult<Void>> handler) {
-    synchronized (monitor) {
-      vertx.executeBlocking(fut -> {
+  public void leave(Promise<Void> promise) {
+    vertx.executeBlocking(prom -> {
+      synchronized (monitor) {
         if (active) {
           active = false;
           lockReleaseExec.shutdown();
           try {
-            if (!customIgnite)
-              ignite.close();
-            else if (eventListener != null)
+            if (eventListener != null) {
               ignite.events().stopLocalListen(eventListener, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED);
+            }
+            if (!customIgnite) {
+              ignite.close();
+            }
           } catch (Exception e) {
             log.error(e);
           }
+          subsMapHelper = null;
+          nodeInfoMap = null;
         }
+      }
 
-        fut.complete();
-      }, handler);
-    }
+      prom.complete();
+    }, promise);
   }
 
   @Override
@@ -334,14 +326,36 @@ public class IgniteClusterManager implements ClusterManager {
     return active;
   }
 
+  @Override
+  public void addRegistration(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
+    vertx.executeBlocking(prom -> {
+      subsMapHelper.put(address, registrationInfo)
+        .onComplete(prom);
+    }, false, promise);
+  }
+
+  @Override
+  public void removeRegistration(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
+    vertx.executeBlocking(prom -> {
+      subsMapHelper.remove(address, registrationInfo, prom);
+    }, false, promise);
+  }
+
+  @Override
+  public void getRegistrations(String address, Promise<List<RegistrationInfo>> promise) {
+    vertx.executeBlocking(prom -> {
+      subsMapHelper.get(address, prom);
+    }, false, promise);
+  }
+
   private IgniteConfiguration loadConfiguration(URL config) {
     try {
       IgniteConfiguration cfg = F.first(IgnitionEx.loadConfigurations(config).get1());
-      setNodeID(cfg);
+      setNodeId(cfg);
       return cfg;
     } catch (IgniteCheckedException e) {
       log.error("Configuration loading error:", e);
-      throw new RuntimeException(e);
+      throw new VertxException(e);
     }
   }
 
@@ -365,16 +379,38 @@ public class IgniteClusterManager implements ClusterManager {
 
     try {
       IgniteConfiguration cfg = F.first(IgnitionEx.loadConfigurations(is).get1());
-      setNodeID(cfg);
+      setNodeId(cfg);
       return cfg;
     } catch (IgniteCheckedException e) {
       log.error("Configuration loading error:", e);
-      throw new RuntimeException(e);
+      throw new VertxException(e);
     }
   }
 
-  private void setNodeID(IgniteConfiguration cfg) {
-    UUID uuid = UUID.fromString(nodeID);
+  private boolean isMaster() {
+    return nodeId(ignite.cluster()
+      .forOldest().node())
+      .equals(nodeId);
+  }
+
+  private void cleanSubs(String id) {
+    try {
+      subsMapHelper.removeAllForNode(id);
+    } catch (IllegalStateException | CacheException e) {
+      //ignore
+    }
+  }
+
+  private void cleanNodeInfos(String nid) {
+    try {
+      nodeInfoMap.remove(nid);
+    } catch (IllegalStateException | CacheException e) {
+      //ignore
+    }
+  }
+
+  private void setNodeId(IgniteConfiguration cfg) {
+    UUID uuid = UUID.randomUUID();
     cfg.setNodeId(uuid);
     cfg.setIgniteInstanceName(VERTX_NODE_PREFIX + uuid);
   }
@@ -384,31 +420,25 @@ public class IgniteClusterManager implements ClusterManager {
     return cache.withExpiryPolicy(DEFAULT_EXPIRY_POLICY);
   }
 
-  private <T> IgniteQueue<T> getQueue(String name, boolean create) {
-    return ignite.queue(name, 1, create ? collectionCfg : null);
-  }
-
   private static String nodeId(ClusterNode node) {
     return node.id().toString();
   }
 
-  private class LockImpl implements Lock {
-    private final String name;
+  private static class LockImpl implements Lock {
+    private final IgniteSemaphore semaphore;
+    private final Executor lockReleaseExec;
+    private final AtomicBoolean released = new AtomicBoolean();
 
-    private LockImpl(String name) {
-      this.name = name;
+    private LockImpl(IgniteSemaphore semaphore, Executor lockReleaseExec) {
+      this.semaphore = semaphore;
+      this.lockReleaseExec = lockReleaseExec;
     }
 
     @Override
     public void release() {
-      lockReleaseExec.execute(() -> {
-        IgniteQueue<String> queue = getQueue(name, true);
-        String ownerId = queue.poll();
-
-        if (ownerId == null) {
-          throw new VertxException("Inconsistent lock state " + name);
-        }
-      });
+      if (released.compareAndSet(false, true)) {
+        lockReleaseExec.execute(semaphore::release);
+      }
     }
   }
 

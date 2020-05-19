@@ -17,16 +17,10 @@
 
 package io.vertx.spi.cluster.ignite.impl;
 
-import java.util.HashMap;
 import org.apache.ignite.IgniteCache;
 
 import javax.cache.Cache;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static io.vertx.spi.cluster.ignite.impl.ClusterSerializationUtils.marshal;
 import static io.vertx.spi.cluster.ignite.impl.ClusterSerializationUtils.unmarshal;
@@ -102,7 +96,7 @@ public class MapImpl<K, V> implements Map<K, V> {
   public void putAll(Map<? extends K, ? extends V> map) {
     Map<K, V> map0 = new HashMap<>();
 
-    for (Entry<K, V> entry : map0.entrySet()) {
+    for (Entry<? extends K, ? extends V> entry : map.entrySet()) {
       map0.put(marshal(entry.getKey()), marshal(entry.getValue()));
     }
 
@@ -139,11 +133,9 @@ public class MapImpl<K, V> implements Map<K, V> {
   @Override
   public Set<Entry<K, V>> entrySet() {
     Set<Entry<K, V>> res = new HashSet<>();
-
     for (Cache.Entry<K, V> entry : cache) {
       res.add(new AbstractMap.SimpleImmutableEntry<>(unmarshal(entry.getKey()), unmarshal(entry.getValue())));
     }
-
     return res;
   }
 
