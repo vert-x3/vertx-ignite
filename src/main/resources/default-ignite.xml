@@ -105,32 +105,43 @@
 
     <!-- Template cache configuration. -->
     <property name="cacheConfiguration">
-      <bean class="org.apache.ignite.configuration.CacheConfiguration">
-        <property name="name" value="*"/>
-        <property name="cacheMode" value="PARTITIONED"/>
-        <property name="backups" value="1"/>
-        <property name="readFromBackup" value="false"/>
-        <property name="writeSynchronizationMode" value="FULL_SYNC"/>
-      </bean>
-    </property>
-
-    <property name="includeEventTypes">
       <list>
-        <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED"/>
+        <bean class="org.apache.ignite.configuration.CacheConfiguration">
+          <property name="name" value="__vertx.*"/>
+          <property name="cacheMode" value="REPLICATED"/>
+          <property name="readFromBackup" value="false"/>
+          <property name="atomicityMode" value="ATOMIC"/>
+          <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+        </bean>
+        <bean class="org.apache.ignite.configuration.CacheConfiguration">
+          <property name="name" value="*"/>
+          <property name="cacheMode" value="PARTITIONED"/>
+          <property name="backups" value="1"/>
+          <property name="readFromBackup" value="false"/>
+          <property name="atomicityMode" value="ATOMIC"/>
+          <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+        </bean>
       </list>
     </property>
 
-    <!-- Logging configuration. -->
-    <property name="gridLogger">
-      <bean class="org.apache.ignite.logger.java.JavaLogger">
-        <constructor-arg type="java.util.logging.Logger">
-          <bean class="java.util.logging.Logger">
-            <constructor-arg type="java.lang.String" value="global"/>
-          </bean>
-        </constructor-arg>
-      </bean>
-    </property>
+  <property name="includeEventTypes">
+    <list>
+      <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_PUT"/>
+      <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED"/>
+    </list>
+  </property>
 
-    <property name="metricsLogFrequency" value="0"/>
-  </bean>
+  <!-- Logging configuration. -->
+  <property name="gridLogger">
+    <bean class="org.apache.ignite.logger.java.JavaLogger">
+      <constructor-arg type="java.util.logging.Logger">
+        <bean class="java.util.logging.Logger">
+          <constructor-arg type="java.lang.String" value="global"/>
+        </bean>
+      </constructor-arg>
+    </bean>
+  </property>
+
+  <property name="metricsLogFrequency" value="0"/>
+</bean>
 </beans>

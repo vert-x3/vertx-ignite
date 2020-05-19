@@ -19,6 +19,7 @@ package io.vertx.spi.cluster.ignite.impl;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.shareddata.impl.ClusterSerializable;
+
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -68,7 +69,7 @@ public class ClusterSerializationUtils {
   private static ClusterSerializable unmarshal0(ClusterSerializableValue value) {
     try {
       Class<?> cls = Thread.currentThread().getContextClassLoader().loadClass(value.getClassName());
-      ClusterSerializable obj = (ClusterSerializable) cls.newInstance();
+      ClusterSerializable obj = (ClusterSerializable) cls.getDeclaredConstructor().newInstance();
       obj.readFromBuffer(0, Buffer.buffer(value.getData()));
       return obj;
     } catch (Exception e) {
