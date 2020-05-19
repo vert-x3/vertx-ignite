@@ -1,6 +1,6 @@
 = Apache Ignite Cluster Manager
 
-image:https://vertx.ci.cloudbees.com/buildStatus/icon?job=vert.x3-ignite["Build Status",link="https://vertx.ci.cloudbees.com/view/vert.x-3/job/vert.x3-ignite/"]
+image:https://travis-ci.org/vert-x3/vertx-ignite.svg?branch=master["Build Status", link="https://travis-ci.org/vert-x3/vertx-ignite"]
 
 This is a cluster manager implementation for Vert.x that uses http://ignite.apache.org/index.html[Apache Ignite].
 
