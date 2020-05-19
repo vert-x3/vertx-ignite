@@ -101,6 +101,18 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.ignite</groupId>
+      <artifactId>ignite-slf4j</artifactId>
+      <version>${ignite.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.1.7</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -112,6 +124,9 @@
           <configuration>
             <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
             <systemPropertyVariables>
+              <java.net.preferIPv4Stack>true</java.net.preferIPv4Stack>
+              <IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED>true</IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED>
+              <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.SLF4JLogDelegateFactory</vertx.logger-delegate-factory-class-name>
               <io.netty.leakDetectionLevel>PARANOID</io.netty.leakDetectionLevel>
               <buildDirectory>${project.build.directory}</buildDirectory>
               <vertxVersion>${project.version}</vertxVersion>

@@ -1,5 +1,5 @@
-sudo: required
 language: java
+install: true
 branches:
   only:
   - master
@@ -12,13 +12,9 @@ before_cache:
 jobs:
   include:
     - stage: test
-      name: "OpenJDK 8"
+      name: "Unit tests - OpenJDK 8"
+      script: mvn -B -DtestLogLevel=OFF test
       jdk: openjdk8
-      script: mvn -q clean verify -B
-    - if: type != pull_request
-      name: "OpenJDK 11"
-      jdk: openjdk11
-      script: mvn -q clean verify -B
     - stage: deploy
       name: "Deploy to Sonatype's snapshots repository"
       jdk: openjdk8

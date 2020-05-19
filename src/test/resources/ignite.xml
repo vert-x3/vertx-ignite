@@ -61,13 +61,7 @@
 
     <!-- Logging configuration. -->
     <property name="gridLogger">
-      <bean class="org.apache.ignite.logger.java.JavaLogger">
-        <constructor-arg type="java.util.logging.Logger">
-          <bean class="java.util.logging.Logger">
-            <constructor-arg type="java.lang.String" value="global"/>
-          </bean>
-        </constructor-arg>
-      </bean>
+      <bean class="org.apache.ignite.logger.slf4j.Slf4jLogger"/>
     </property>
 
     <property name="metricsLogFrequency" value="0"/>
