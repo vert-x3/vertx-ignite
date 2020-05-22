@@ -221,7 +221,11 @@ public class IgniteClusterManager implements ClusterManager {
     nodeInfoMap.getAsync(id).listen(fut -> {
       try {
         IgniteNodeInfo value = fut.get();
-        promise.complete(value != null ? value.unwrap() : null);
+        if (value != null) {
+          promise.complete(value.unwrap());
+        } else {
+          promise.fail("Not a member of the cluster");
+        }
       } catch (IgniteException e) {
         promise.fail(e);
       }
