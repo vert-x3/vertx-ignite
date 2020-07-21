@@ -21,6 +21,7 @@
       <pattern>%d [%thread] %-5level %logger{36} - %msg%n</pattern>
     </encoder>
   </appender>
+  <logger name="org.apache.ignite.IgniteLogger" level="ERROR"/>
   <root level="${testLogLevel:-INFO}">
     <appender-ref ref="STDOUT"/>
   </root>

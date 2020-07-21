@@ -21,14 +21,13 @@ import io.vertx.core.*;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.shareddata.Counter;
 import io.vertx.core.shareddata.Lock;
 import io.vertx.core.spi.cluster.*;
-import io.vertx.spi.cluster.ignite.impl.AsyncMapImpl;
-import io.vertx.spi.cluster.ignite.impl.IgniteNodeInfo;
-import io.vertx.spi.cluster.ignite.impl.MapImpl;
-import io.vertx.spi.cluster.ignite.impl.SubsMapHelper;
+import io.vertx.spi.cluster.ignite.impl.*;
 import org.apache.ignite.*;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -41,8 +40,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import javax.cache.CacheException;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
-import java.io.InputStream;
-import java.io.Serializable;
+import java.io.*;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.Executor;
@@ -60,16 +58,15 @@ import static org.apache.ignite.events.EventType.*;
  * Apache Ignite based cluster manager.
  *
  * @author Andrey Gura
+ * @author Lukas Prettenthaler
  */
 public class IgniteClusterManager implements ClusterManager {
 
   private static final Logger log = LoggerFactory.getLogger(IgniteClusterManager.class);
 
-  // Default Ignite configuration file
-  private static final String DEFAULT_CONFIG_FILE = "default-ignite.xml";
-
   // User defined Ignite configuration file
-  private static final String CONFIG_FILE = "ignite.xml";
+  private static final String DEFAULT_CONFIG_FILE = "default-ignite.json";
+  private static final String CONFIG_FILE = "ignite.json";
 
   private static final String VERTX_NODE_PREFIX = "vertx.ignite.node.";
 
@@ -364,31 +361,44 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   private IgniteConfiguration loadConfiguration() {
+    IgniteOptions options = new IgniteOptions(lookupConfiguration());
+    IgniteConfiguration config = options.toConfig();
+    config.setGridLogger(new VertxLogger());
+    setNodeId(config);
+    return config;
+  }
+
+  private JsonObject lookupConfiguration() {
     ClassLoader ctxClsLoader = Thread.currentThread().getContextClassLoader();
-
     InputStream is = null;
-
     if (ctxClsLoader != null) {
       is = ctxClsLoader.getResourceAsStream(CONFIG_FILE);
     }
-
     if (is == null) {
       is = getClass().getClassLoader().getResourceAsStream(CONFIG_FILE);
-
       if (is == null) {
         is = getClass().getClassLoader().getResourceAsStream(DEFAULT_CONFIG_FILE);
-        log.info("Using default configuration.");
       }
     }
-
-    try {
-      IgniteConfiguration cfg = F.first(IgnitionEx.loadConfigurations(is).get1());
-      setNodeId(cfg);
-      return cfg;
-    } catch (IgniteCheckedException e) {
-      log.error("Configuration loading error:", e);
-      throw new VertxException(e);
+    if (is == null) {
+      return new JsonObject();
     }
+    try {
+      return new JsonObject(readFromInputStream(is));
+    } catch (NullPointerException | DecodeException | IOException e) {
+      return new JsonObject();
+    }
+  }
+
+  private String readFromInputStream(InputStream inputStream) throws IOException {
+    StringBuilder resultStringBuilder = new StringBuilder();
+    try (BufferedReader br = new BufferedReader(new InputStreamReader(inputStream))) {
+      String line;
+      while ((line = br.readLine()) != null) {
+        resultStringBuilder.append(line).append("\n");
+      }
+    }
+    return resultStringBuilder.toString();
   }
 
   private boolean isMaster() {

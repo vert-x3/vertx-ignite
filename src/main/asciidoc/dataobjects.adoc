@@ -1,0 +1,94 @@
+= Cheatsheets
+
+[[IgniteCacheOptions]]
+== IgniteCacheOptions
+
+++++
+++++
+'''
+
+[cols=">25%,25%,50%"]
+[frame="topbot"]
+|===
+^|Name | Type ^| Description
+|[[atomicityMode]]`@atomicityMode`|`String`|-
+|[[backups]]`@backups`|`Number (int)`|-
+|[[cacheMode]]`@cacheMode`|`String`|-
+|[[copyOnRead]]`@copyOnRead`|`Boolean`|-
+|[[defaultLockTimeout]]`@defaultLockTimeout`|`Number (long)`|-
+|[[eagerTtl]]`@eagerTtl`|`Boolean`|-
+|[[encryptionEnabled]]`@encryptionEnabled`|`Boolean`|-
+|[[eventsDisabled]]`@eventsDisabled`|`Boolean`|-
+|[[groupName]]`@groupName`|`String`|-
+|[[invalidate]]`@invalidate`|`Boolean`|-
+|[[maxConcurrentAsyncOperations]]`@maxConcurrentAsyncOperations`|`Number (int)`|-
+|[[maxQueryInteratorsCount]]`@maxQueryInteratorsCount`|`Number (int)`|-
+|[[name]]`@name`|`String`|-
+|[[onheapCacheEnabled]]`@onheapCacheEnabled`|`Boolean`|-
+|[[partitionLossPolicy]]`@partitionLossPolicy`|`String`|-
+|[[readFromBackup]]`@readFromBackup`|`Boolean`|-
+|[[rebalanceDelay]]`@rebalanceDelay`|`Number (long)`|-
+|[[rebalanceMode]]`@rebalanceMode`|`String`|-
+|[[rebalanceOrder]]`@rebalanceOrder`|`Number (int)`|-
+|[[writeSynchronizationMode]]`@writeSynchronizationMode`|`String`|-
+|===
+
+[[IgniteDiscoveryOptions]]
+== IgniteDiscoveryOptions
+
+++++
+++++
+'''
+
+[cols=">25%,25%,50%"]
+[frame="topbot"]
+|===
+^|Name | Type ^| Description
+|[[properties]]`@properties`|`Json object`|-
+|[[type]]`@type`|`String`|-
+|===
+
+[[IgniteOptions]]
+== IgniteOptions
+
+++++
+++++
+'''
+
+[cols=">25%,25%,50%"]
+[frame="topbot"]
+|===
+^|Name | Type ^| Description
+|[[connectTimeout]]`@connectTimeout`|`Number (long)`|-
+|[[connectionsPerNode]]`@connectionsPerNode`|`Number (int)`|-
+|[[idleConnectionTimeout]]`@idleConnectionTimeout`|`Number (long)`|-
+|[[includeEventTypes]]`@includeEventTypes`|`Array of String`|-
+|[[localHost]]`@localHost`|`String`|-
+|[[localPort]]`@localPort`|`Number (int)`|-
+|[[maxConnectTimeout]]`@maxConnectTimeout`|`Number (long)`|-
+|[[metricsLogFrequency]]`@metricsLogFrequency`|`Number (long)`|-
+|[[reconnectCount]]`@reconnectCount`|`Number (int)`|-
+|===
+
+[[IgniteSslOptions]]
+== IgniteSslOptions
+
+++++
+++++
+'''
+
+[cols=">25%,25%,50%"]
+[frame="topbot"]
+|===
+^|Name | Type ^| Description
+|[[keyAlgorithm]]`@keyAlgorithm`|`String`|-
+|[[keyStoreFilePath]]`@keyStoreFilePath`|`String`|-
+|[[keyStorePassword]]`@keyStorePassword`|`String`|-
+|[[keyStoreType]]`@keyStoreType`|`String`|-
+|[[protocol]]`@protocol`|`String`|-
+|[[trustAll]]`@trustAll`|`Boolean`|-
+|[[trustStoreFilePath]]`@trustStoreFilePath`|`String`|-
+|[[trustStorePassword]]`@trustStorePassword`|`String`|-
+|[[trustStoreType]]`@trustStoreType`|`String`|-
+|===
+
