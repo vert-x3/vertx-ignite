@@ -25,11 +25,11 @@ Please make sure you don’t have any other cluster managers on your classpath o
 Alternatively, you can configure the following system property to instruct vert.x to use this cluster manager:
 `-Dvertx.clusterManagerFactory=io.vertx.spi.cluster.ignite.IgniteClusterManager`
 
-### Using Vert.x from command line
+=== Using Vert.x from command line
 
 `vertx-ignite-${maven.version}.jar` should be in the `lib` directory of the Vert.x installation.
 
-### Using Vert.x in Maven or Gradle project
+=== Using Vert.x in Maven or Gradle project
 
 Add a dependency to the artifact.
 
@@ -51,7 +51,7 @@ Add a dependency to the artifact.
 compile '${maven.groupId}:${maven.artifactId}:${maven.version}'
 ----
 
-### Programmatically specifying cluster manager
+=== Programmatically specifying cluster manager
 
 You can also specify the cluster manager programmatically. In order to do this just specify it on the options
 when you are creating your Vert.x instance, for example:
@@ -78,15 +78,15 @@ https://apacheignite.readme.io/docs/page-memory[Ignite Virtual Memory] article.
 
 === Using configuration file
 
-The cluster manager is configured by a file `default-ignite.xml` which is packaged inside the jar.
+The cluster manager is configured by a file `default-ignite.json` which is packaged inside the jar.
 
-If you want to override this configuration you can provide `ignite.xml` file on your classpath and this will be
+If you want to override this configuration you can provide `ignite.json` file on your classpath and this will be
 used instead.
 
-The xml file is a Ignite configuration file and is described in details in
+The json format is a simplified version of the xml config described in details at
 https://apacheignite.readme.io/docs[Apache Ignite documentation].
 
-### Configuring programmatically
+=== Configuring programmatically
 
 You can also specify configuration programmatically:
 
@@ -146,9 +146,9 @@ To tell Ignite to use a specific interface you can provide the IP address of the
 bean of `IgniteConfiguration` type using `localHost` property. For example:
 
 ----
-<bean class="org.apache.ignite.configuration.IgniteConfiguration">
-  <property name="localHost" value="192.168.1.20"/>
-</bean>
+{
+  "localHost": "192.168.1.20"
+}
 ----
 
 When running Vert.x is in clustered mode, you should also make sure that Vert.x knows about the correct interface.

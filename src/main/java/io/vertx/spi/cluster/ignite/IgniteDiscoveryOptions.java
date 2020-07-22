@@ -37,44 +37,90 @@ public class IgniteDiscoveryOptions {
   private String type;
   private JsonObject properties;
 
+  /**
+   * Default constructor
+   */
   public IgniteDiscoveryOptions() {
     type = "TcpDiscoveryMulticastIpFinder";
     properties = new JsonObject();
   }
 
+  /**
+   * Copy constructor
+   *
+   * @param options the one to copy
+   */
   public IgniteDiscoveryOptions(IgniteDiscoveryOptions options) {
     this.type = options.type;
   }
 
+  /**
+   * Constructor from JSON
+   *
+   * @param options the JSON
+   */
   public IgniteDiscoveryOptions(JsonObject options) {
     this();
     IgniteDiscoveryOptionsConverter.fromJson(options, this);
   }
 
+  /**
+   * Get the discovery implementation type.
+   *
+   * @return Type of the implementation.
+   */
   public String getType() {
     return type;
   }
 
+  /**
+   * Sets the discovery implementation type.
+   * Defaults to TcpDiscoveryMulticastIpFinder
+   *
+   * @param type Implemenation type.
+   * @return reference to this, for fluency
+   */
   public IgniteDiscoveryOptions setType(String type) {
     this.type = type;
     return this;
   }
 
+  /**
+   * Get the discovery implementation properties.
+   *
+   * @return Properties of the discovery implementation.
+   */
   public JsonObject getProperties() {
     return properties;
   }
 
+  /**
+   * Sets the properties used to configure the discovery implementation.
+   *
+   * @param properties Properties for the discovery implementation.
+   * @return reference to this, for fluency
+   */
   public IgniteDiscoveryOptions setProperties(JsonObject properties) {
     this.properties = properties;
     return this;
   }
 
+  /**
+   * Convert to JSON
+   *
+   * @return the JSON
+   */
   public JsonObject toJson() {
     JsonObject json = new JsonObject();
     IgniteDiscoveryOptionsConverter.toJson(this, json);
     return json;
   }
 
+  /**
+   * Convert to IgniteConfiguration
+   *
+   * @return the DiscoverySpi
+   */
   public DiscoverySpi toConfig() {
     switch (type) {
       case "TcpDiscoveryVmIpFinder":
