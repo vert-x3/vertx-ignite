@@ -30,4 +30,3 @@ dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
 /ignite
-src/main/generated
