@@ -66,6 +66,30 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.ignite</groupId>
+      <artifactId>ignite-spring</artifactId>
+      <version>${ignite.version}</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.ignite</groupId>
+          <artifactId>ignite-indexing</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.springframework</groupId>
+          <artifactId>spring-aop</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.springframework</groupId>
+          <artifactId>spring-tx</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.springframework</groupId>
+          <artifactId>spring-jdbc</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
       <type>test-jar</type>

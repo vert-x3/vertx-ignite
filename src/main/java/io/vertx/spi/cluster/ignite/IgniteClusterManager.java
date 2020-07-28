@@ -21,20 +21,18 @@ import io.vertx.core.*;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
-import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.shareddata.Counter;
 import io.vertx.core.shareddata.Lock;
 import io.vertx.core.spi.cluster.*;
 import io.vertx.spi.cluster.ignite.impl.*;
+import io.vertx.spi.cluster.ignite.util.ConfigHelper;
 import org.apache.ignite.*;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
-import org.apache.ignite.internal.IgnitionEx;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgnitePredicate;
 
 import javax.cache.CacheException;
@@ -53,6 +51,7 @@ import java.util.stream.Collectors;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static javax.cache.expiry.Duration.ETERNAL;
 import static org.apache.ignite.events.EventType.*;
+import static org.apache.ignite.internal.IgniteComponentType.SPRING;
 
 /**
  * Apache Ignite based cluster manager.
@@ -64,9 +63,12 @@ public class IgniteClusterManager implements ClusterManager {
 
   private static final Logger log = LoggerFactory.getLogger(IgniteClusterManager.class);
 
-  // User defined Ignite configuration file
+  // Default Ignite configuration file
   private static final String DEFAULT_CONFIG_FILE = "default-ignite.json";
+  // User defined Ignite configuration file
   private static final String CONFIG_FILE = "ignite.json";
+  // Fallback XML Ignite configuration file (requires ignite-spring dependency)
+  private static final String XML_CONFIG_FILE = "ignite.xml";
 
   private static final String VERTX_NODE_PREFIX = "vertx.ignite.node.";
 
@@ -101,6 +103,17 @@ public class IgniteClusterManager implements ClusterManager {
   @SuppressWarnings("unused")
   public IgniteClusterManager() {
     System.setProperty("IGNITE_NO_SHUTDOWN_HOOK", "true");
+    if (SPRING.inClassPath()) {
+      try {
+        cfg = ConfigHelper.lookupXmlConfiguration(this.getClass(), XML_CONFIG_FILE);
+      } catch (VertxException e) {
+        log.debug("xml config could not be loaded");
+      }
+    }
+    if (cfg == null) {
+      cfg = ConfigHelper.loadConfiguration(ConfigHelper.lookupJsonConfiguration(this.getClass(), CONFIG_FILE, DEFAULT_CONFIG_FILE));
+    }
+    setNodeId(cfg);
   }
 
   /**
@@ -111,6 +124,7 @@ public class IgniteClusterManager implements ClusterManager {
    */
   @SuppressWarnings("unused")
   public IgniteClusterManager(IgniteConfiguration cfg) {
+    System.setProperty("IGNITE_NO_SHUTDOWN_HOOK", "true");
     this.cfg = cfg;
     setNodeId(cfg);
   }
@@ -123,7 +137,22 @@ public class IgniteClusterManager implements ClusterManager {
    */
   @SuppressWarnings("unused")
   public IgniteClusterManager(URL configFile) {
-    this.cfg = loadConfiguration(configFile);
+    System.setProperty("IGNITE_NO_SHUTDOWN_HOOK", "true");
+    this.cfg = ConfigHelper.loadConfiguration(configFile);
+    setNodeId(cfg);
+  }
+
+  /**
+   * Creates cluster manager instance with given JSON configuration.
+   * Use this constructor in order to configure cluster manager programmatically.
+   *
+   * @param jsonConfig {@code JsonObject} JSON configuration.
+   */
+  @SuppressWarnings("unused")
+  public IgniteClusterManager(JsonObject jsonConfig) {
+    System.setProperty("IGNITE_NO_SHUTDOWN_HOOK", "true");
+    this.cfg = ConfigHelper.loadConfiguration(jsonConfig);
+    setNodeId(cfg);
   }
 
   /**
@@ -250,7 +279,7 @@ public class IgniteClusterManager implements ClusterManager {
           lockReleaseExec = Executors.newCachedThreadPool(r -> new Thread(r, "vertx-ignite-service-release-lock-thread"));
 
           if (!customIgnite) {
-            ignite = cfg == null ? Ignition.start(loadConfiguration()) : Ignition.start(cfg);
+            ignite = Ignition.start(cfg);
           }
           nodeId = nodeId(ignite.cluster().localNode());
 
@@ -347,58 +376,6 @@ public class IgniteClusterManager implements ClusterManager {
     vertx.executeBlocking(prom -> {
       subsMapHelper.get(address, prom);
     }, false, promise);
-  }
-
-  private IgniteConfiguration loadConfiguration(URL config) {
-    try {
-      IgniteConfiguration cfg = F.first(IgnitionEx.loadConfigurations(config).get1());
-      setNodeId(cfg);
-      return cfg;
-    } catch (IgniteCheckedException e) {
-      log.error("Configuration loading error:", e);
-      throw new VertxException(e);
-    }
-  }
-
-  private IgniteConfiguration loadConfiguration() {
-    IgniteOptions options = new IgniteOptions(lookupConfiguration());
-    IgniteConfiguration config = options.toConfig();
-    config.setGridLogger(new VertxLogger());
-    setNodeId(config);
-    return config;
-  }
-
-  private JsonObject lookupConfiguration() {
-    ClassLoader ctxClsLoader = Thread.currentThread().getContextClassLoader();
-    InputStream is = null;
-    if (ctxClsLoader != null) {
-      is = ctxClsLoader.getResourceAsStream(CONFIG_FILE);
-    }
-    if (is == null) {
-      is = getClass().getClassLoader().getResourceAsStream(CONFIG_FILE);
-      if (is == null) {
-        is = getClass().getClassLoader().getResourceAsStream(DEFAULT_CONFIG_FILE);
-      }
-    }
-    if (is == null) {
-      return new JsonObject();
-    }
-    try {
-      return new JsonObject(readFromInputStream(is));
-    } catch (NullPointerException | DecodeException | IOException e) {
-      return new JsonObject();
-    }
-  }
-
-  private String readFromInputStream(InputStream inputStream) throws IOException {
-    StringBuilder resultStringBuilder = new StringBuilder();
-    try (BufferedReader br = new BufferedReader(new InputStreamReader(inputStream))) {
-      String line;
-      while ((line = br.readLine()) != null) {
-        resultStringBuilder.append(line).append("\n");
-      }
-    }
-    return resultStringBuilder.toString();
   }
 
   private boolean isMaster() {

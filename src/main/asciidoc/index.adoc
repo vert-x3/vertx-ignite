@@ -83,6 +83,9 @@ The cluster manager is configured by a file `default-ignite.json` which is packa
 If you want to override this configuration you can provide `ignite.json` file on your classpath and this will be
 used instead.
 
+If you want to fallback to the original xml configuration you can provide `ignite.xml` file on your classpath
+and this will be used instead. Note: You need to add back the `ignite-spring` module to your classpath.
+
 The json format is a simplified version of the xml config described in details at
 https://apacheignite.readme.io/docs[Apache Ignite documentation].
 
