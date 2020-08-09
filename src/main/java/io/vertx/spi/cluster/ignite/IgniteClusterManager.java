@@ -257,40 +257,10 @@ public class IgniteClusterManager implements ClusterManager {
           }
           nodeId = nodeId(ignite.cluster().localNode());
 
-          eventListener = event -> {
-            if (!active) {
-              return false;
-            }
-
-            vertx.executeBlocking(f -> {
-              if (isActive()) {
-                switch (event.type()) {
-                  case EVT_NODE_JOINED:
-                    if (nodeListener != null) {
-                      nodeListener.nodeAdded(nodeId(((DiscoveryEvent) event).eventNode()));
-                    }
-                    break;
-                  case EVT_NODE_LEFT:
-                  case EVT_NODE_FAILED:
-                    String id = nodeId(((DiscoveryEvent) event).eventNode());
-                    if (isMaster()) {
-                      cleanSubs(id);
-                      cleanNodeInfos(id);
-                    }
-                    if (nodeListener != null) {
-                      nodeListener.nodeLeft(id);
-                    }
-                    break;
-                }
-              }
-              f.complete();
-            }, null);
-
-            return true;
-          };
+          eventListener = this::listen;
 
           ignite.events().localListen(eventListener, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED);
-          subsMapHelper = new SubsMapHelper(ignite, nodeSelector);
+          subsMapHelper = new SubsMapHelper(ignite, nodeSelector, vertx);
           nodeInfoMap = ignite.getOrCreateCache("__vertx.nodeInfo");
 
           prom.complete();
@@ -310,6 +280,7 @@ public class IgniteClusterManager implements ClusterManager {
             if (eventListener != null) {
               ignite.events().stopLocalListen(eventListener, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED);
             }
+            this.subsMapHelper.leave(ignite);
             if (!customIgnite) {
               ignite.close();
             }
@@ -350,6 +321,44 @@ public class IgniteClusterManager implements ClusterManager {
     vertx.executeBlocking(prom -> {
       subsMapHelper.get(address, prom);
     }, false, promise);
+  }
+
+  boolean listen(Event event) {
+    if (!active) {
+      return false;
+    }
+
+    vertx.executeBlocking(f -> {
+      if (isActive()) {
+        switch (event.type()) {
+          case EVT_NODE_JOINED:
+            if (nodeListener != null) {
+              nodeListener.nodeAdded(nodeId(((DiscoveryEvent) event).eventNode()));
+            }
+            break;
+          case EVT_NODE_LEFT:
+          case EVT_NODE_FAILED:
+            String id = nodeId(((DiscoveryEvent) event).eventNode());
+            if (isMaster()) {
+              cleanSubs(id);
+              cleanNodeInfos(id);
+            }
+            if (nodeListener != null) {
+                try {
+                  nodeListener.nodeLeft(id);
+                } catch (Exception e) {
+                  if (!e.getMessage().contains("Failed to send message")) {
+                    throw e;
+                  }
+                }
+            }
+            break;
+        }
+      }
+      f.complete();
+    }, null);
+
+    return true;
   }
 
   private IgniteConfiguration loadConfiguration(URL config) {
@@ -401,7 +410,7 @@ public class IgniteClusterManager implements ClusterManager {
     try {
       subsMapHelper.removeAllForNode(id);
     } catch (IllegalStateException | CacheException e) {
-      //ignore
+        log.error("Failed to remove all subscribers", e);
     }
   }
 
@@ -409,7 +418,7 @@ public class IgniteClusterManager implements ClusterManager {
     try {
       nodeInfoMap.remove(nid);
     } catch (IllegalStateException | CacheException e) {
-      //ignore
+        log.error("Failed to remove node info", e);
     }
   }
 
