@@ -81,10 +81,127 @@ https://apacheignite.readme.io/docs/page-memory[Ignite Virtual Memory] article.
 The cluster manager is configured by a file `default-ignite.json` which is packaged inside the jar.
 
 If you want to override this configuration you can provide `ignite.json` file on your classpath and this will be
-used instead.
+used instead. The config maps to {@link io.vertx.spi.cluster.ignite.IgniteOptions} where you can find more details on
+each individual option.
 
-If you want to fallback to the original xml configuration you can provide `ignite.xml` file on your classpath
-and this will be used instead. Note: You need to add back the `ignite-spring` module to your classpath.
+In the example below the default config is extended to activate tls for cluster communication.
+[source,json]
+----
+{
+  "cacheConfiguration": [{
+    "name": "__vertx.*",
+    "cacheMode": "REPLICATED",
+    "readFromBackup": false,
+    "atomicityMode": "ATOMIC",
+    "writeSynchronizationMode": "FULL_SYNC"
+  }, {
+    "name": "*",
+    "cacheMode": "PARTITIONED",
+    "backups": 1,
+    "readFromBackup": false,
+    "atomicityMode": "ATOMIC",
+    "writeSynchronizationMode": "FULL_SYNC"
+  }],
+  "sslContextFactory": {
+    "protocol": "TLSv1.2",
+    "keyStoreFilePath": "server.jks",
+    "keyStorePassword": "changeme",
+    "trustStoreFilePath": "server.jks",
+    "trustStorePassword": "changeme",
+    "trustAll": false
+  },
+  "includeEventTypes": ["EVT_CACHE_OBJECT_PUT", "EVT_CACHE_OBJECT_REMOVED"],
+  "metricsLogFrequency": 0
+}
+----
+
+As an alternative to the json format you can use the native ignite xml configuration. You can provide `ignite.xml` file
+on your classpath and it will be used instead. Note: You need to add back the `ignite-spring` module to your classpath.
+
+Add the ignite-spring dependency.
+
+* Maven (in your `pom.xml`):
+
+[source,xml,subs="+attributes"]
+----
+<dependency>
+  <groupId>org.apache.ignite</groupId>
+  <artifactId>ignite-spring</artifactId>
+  <version>${ignite.version}</version>
+</dependency>
+----
+
+* Gradle (in your `build.gradle` file):
+
+[source,groovy,subs="+attributes"]
+----
+compile 'org.apache.ignite:ignite-spring:${ignite.version}'
+----
+
+* Example for a default xml config:
+
+[source,xml,subs="+attributes"]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/util
+                           http://www.springframework.org/schema/util/spring-util.xsd">
+
+  <bean class="org.apache.ignite.configuration.IgniteConfiguration">
+
+    <property name="discoverySpi">
+      <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
+        <property name="ipFinder">
+          <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder"/>
+        </property>
+      </bean>
+    </property>
+
+    <property name="cacheConfiguration">
+      <list>
+        <bean class="org.apache.ignite.configuration.CacheConfiguration">
+          <property name="name" value="__vertx.*"/>
+          <property name="cacheMode" value="REPLICATED"/>
+          <property name="readFromBackup" value="false"/>
+          <property name="atomicityMode" value="ATOMIC"/>
+          <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+        </bean>
+        <bean class="org.apache.ignite.configuration.CacheConfiguration">
+          <property name="name" value="*"/>
+          <property name="cacheMode" value="PARTITIONED"/>
+          <property name="backups" value="1"/>
+          <property name="readFromBackup" value="false"/>
+          <property name="atomicityMode" value="ATOMIC"/>
+          <property name="affinity">
+            <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">
+              <property name="partitions" value="128"/>
+            </bean>
+          </property>
+          <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+        </bean>
+      </list>
+    </property>
+
+    <property name="includeEventTypes">
+      <list>
+        <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_PUT"/>
+        <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED"/>
+      </list>
+    </property>
+
+    <property name="gridLogger">
+      <bean class="io.vertx.spi.cluster.ignite.impl.VertxLogger"/>
+    </property>
+
+    <property name="metricsLogFrequency" value="0"/>
+  </bean>
+</beans>
+----
 
 The json format is a simplified version of the xml config described in details at
 https://apacheignite.readme.io/docs[Apache Ignite documentation].
