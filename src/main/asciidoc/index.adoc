@@ -84,7 +84,7 @@ If you want to override this configuration you can provide `ignite.json` file on
 used instead. The config maps to {@link io.vertx.spi.cluster.ignite.IgniteOptions} where you can find more details on
 each individual option.
 
-In the example below the default config is extended to activate tls for cluster communication.
+In the example below the default config is extended to activate TLS for cluster communication.
 [source,json]
 ----
 {
@@ -115,10 +115,10 @@ In the example below the default config is extended to activate tls for cluster 
 }
 ----
 
-As an alternative to the json format you can use the native ignite xml configuration. You can provide `ignite.xml` file
-on your classpath and it will be used instead. Note: You need to add back the `ignite-spring` module to your classpath.
+As an alternative to the json format you can use the native Ignite XML configuration. You can provide an `ignite.xml` file
+on your classpath and it will be used instead.
 
-Add the ignite-spring dependency.
+First, add the `ignite-spring` dependency.
 
 * Maven (in your `pom.xml`):
 
@@ -138,7 +138,7 @@ Add the ignite-spring dependency.
 compile 'org.apache.ignite:ignite-spring:${ignite.version}'
 ----
 
-* Example for a default xml config:
+Then add an `ignite.xml` file like this one:
 
 [source,xml,subs="+attributes"]
 ----
