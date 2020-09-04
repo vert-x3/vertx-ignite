@@ -1,0 +1,28 @@
+{
+  "localHost": "127.0.0.1",
+  "discoverySpi": {
+    "type": "TcpDiscoveryVmIpFinder",
+    "properties": {
+      "joinTimeout": 10000,
+      "addresses": ["127.0.0.1:47500..47549"]
+    }
+  },
+  "cacheConfiguration": [
+    {
+      "name": "__vertx.*",
+      "cacheMode": "REPLICATED",
+      "readFromBackup": false,
+      "atomicityMode": "ATOMIC",
+      "writeSynchronizationMode": "FULL_SYNC"
+    }, {
+      "name": "*",
+      "cacheMode": "PARTITIONED",
+      "backups": 1,
+      "readFromBackup": false,
+      "atomicityMode": "ATOMIC",
+      "writeSynchronizationMode": "FULL_SYNC"
+    }
+  ],
+  "includeEventTypes": ["EVT_CACHE_OBJECT_PUT", "EVT_CACHE_OBJECT_REMOVED"],
+  "metricsLogFrequency": 0
+}

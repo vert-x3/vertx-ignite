@@ -25,11 +25,11 @@ Please make sure you don’t have any other cluster managers on your classpath o
 Alternatively, you can configure the following system property to instruct vert.x to use this cluster manager:
 `-Dvertx.clusterManagerFactory=io.vertx.spi.cluster.ignite.IgniteClusterManager`
 
-### Using Vert.x from command line
+=== Using Vert.x from command line
 
 `vertx-ignite-${maven.version}.jar` should be in the `lib` directory of the Vert.x installation.
 
-### Using Vert.x in Maven or Gradle project
+=== Using Vert.x in Maven or Gradle project
 
 Add a dependency to the artifact.
 
@@ -51,7 +51,7 @@ Add a dependency to the artifact.
 compile '${maven.groupId}:${maven.artifactId}:${maven.version}'
 ----
 
-### Programmatically specifying cluster manager
+=== Programmatically specifying cluster manager
 
 You can also specify the cluster manager programmatically. In order to do this just specify it on the options
 when you are creating your Vert.x instance, for example:
@@ -78,15 +78,135 @@ https://apacheignite.readme.io/docs/page-memory[Ignite Virtual Memory] article.
 
 === Using configuration file
 
-The cluster manager is configured by a file `default-ignite.xml` which is packaged inside the jar.
+The cluster manager is configured by a file `default-ignite.json` which is packaged inside the jar.
 
-If you want to override this configuration you can provide `ignite.xml` file on your classpath and this will be
-used instead.
+If you want to override this configuration you can provide `ignite.json` file on your classpath and this will be
+used instead. The config maps to {@link io.vertx.spi.cluster.ignite.IgniteOptions} where you can find more details on
+each individual option.
 
-The xml file is a Ignite configuration file and is described in details in
+In the example below the default config is extended to activate TLS for cluster communication.
+[source,json]
+----
+{
+  "cacheConfiguration": [{
+    "name": "__vertx.*",
+    "cacheMode": "REPLICATED",
+    "readFromBackup": false,
+    "atomicityMode": "ATOMIC",
+    "writeSynchronizationMode": "FULL_SYNC"
+  }, {
+    "name": "*",
+    "cacheMode": "PARTITIONED",
+    "backups": 1,
+    "readFromBackup": false,
+    "atomicityMode": "ATOMIC",
+    "writeSynchronizationMode": "FULL_SYNC"
+  }],
+  "sslContextFactory": {
+    "protocol": "TLSv1.2",
+    "keyStoreFilePath": "server.jks",
+    "keyStorePassword": "changeme",
+    "trustStoreFilePath": "server.jks",
+    "trustStorePassword": "changeme",
+    "trustAll": false
+  },
+  "includeEventTypes": ["EVT_CACHE_OBJECT_PUT", "EVT_CACHE_OBJECT_REMOVED"],
+  "metricsLogFrequency": 0
+}
+----
+
+As an alternative to the json format you can use the native Ignite XML configuration. You can provide an `ignite.xml` file
+on your classpath and it will be used instead.
+
+First, add the `ignite-spring` dependency.
+
+* Maven (in your `pom.xml`):
+
+[source,xml,subs="+attributes"]
+----
+<dependency>
+  <groupId>org.apache.ignite</groupId>
+  <artifactId>ignite-spring</artifactId>
+  <version>${ignite.version}</version>
+</dependency>
+----
+
+* Gradle (in your `build.gradle` file):
+
+[source,groovy,subs="+attributes"]
+----
+compile 'org.apache.ignite:ignite-spring:${ignite.version}'
+----
+
+Then add an `ignite.xml` file like this one:
+
+[source,xml,subs="+attributes"]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/util
+                           http://www.springframework.org/schema/util/spring-util.xsd">
+
+  <bean class="org.apache.ignite.configuration.IgniteConfiguration">
+
+    <property name="discoverySpi">
+      <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
+        <property name="ipFinder">
+          <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder"/>
+        </property>
+      </bean>
+    </property>
+
+    <property name="cacheConfiguration">
+      <list>
+        <bean class="org.apache.ignite.configuration.CacheConfiguration">
+          <property name="name" value="__vertx.*"/>
+          <property name="cacheMode" value="REPLICATED"/>
+          <property name="readFromBackup" value="false"/>
+          <property name="atomicityMode" value="ATOMIC"/>
+          <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+        </bean>
+        <bean class="org.apache.ignite.configuration.CacheConfiguration">
+          <property name="name" value="*"/>
+          <property name="cacheMode" value="PARTITIONED"/>
+          <property name="backups" value="1"/>
+          <property name="readFromBackup" value="false"/>
+          <property name="atomicityMode" value="ATOMIC"/>
+          <property name="affinity">
+            <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">
+              <property name="partitions" value="128"/>
+            </bean>
+          </property>
+          <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+        </bean>
+      </list>
+    </property>
+
+    <property name="includeEventTypes">
+      <list>
+        <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_PUT"/>
+        <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED"/>
+      </list>
+    </property>
+
+    <property name="gridLogger">
+      <bean class="io.vertx.spi.cluster.ignite.impl.VertxLogger"/>
+    </property>
+
+    <property name="metricsLogFrequency" value="0"/>
+  </bean>
+</beans>
+----
+
+The json format is a simplified version of the xml config described in details at
 https://apacheignite.readme.io/docs[Apache Ignite documentation].
 
-### Configuring programmatically
+=== Configuring programmatically
 
 You can also specify configuration programmatically:
 
@@ -146,9 +266,9 @@ To tell Ignite to use a specific interface you can provide the IP address of the
 bean of `IgniteConfiguration` type using `localHost` property. For example:
 
 ----
-<bean class="org.apache.ignite.configuration.IgniteConfiguration">
-  <property name="localHost" value="192.168.1.20"/>
-</bean>
+{
+  "localHost": "192.168.1.20"
+}
 ----
 
 When running Vert.x is in clustered mode, you should also make sure that Vert.x knows about the correct interface.

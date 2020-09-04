@@ -1,0 +1,192 @@
+= Cheatsheets
+
+[[IgniteCacheOptions]]
+== IgniteCacheOptions
+
+++++
+++++
+'''
+
+[cols=">25%,25%,50%"]
+[frame="topbot"]
+|===
+^|Name | Type ^| Description
+|[[atomicityMode]]`@atomicityMode`|`String`|+++
+Sets cache atomicity mode.
++++
+|[[backups]]`@backups`|`Number (int)`|+++
+Sets number of nodes used to back up single partition for PARTITIONED cache.
++++
+|[[cacheMode]]`@cacheMode`|`String`|+++
+Sets caching mode.
++++
+|[[copyOnRead]]`@copyOnRead`|`Boolean`|+++
+Sets copy on read flag.
++++
+|[[defaultLockTimeout]]`@defaultLockTimeout`|`Number (long)`|+++
+Sets default lock timeout in milliseconds.
++++
+|[[eagerTtl]]`@eagerTtl`|`Boolean`|+++
+Sets eager ttl flag.
++++
+|[[encryptionEnabled]]`@encryptionEnabled`|`Boolean`|+++
+Sets encrypted flag.
++++
+|[[eventsDisabled]]`@eventsDisabled`|`Boolean`|+++
+Sets events disabled flag.
++++
+|[[groupName]]`@groupName`|`String`|+++
+Sets the cache group name.
+
+ Caches with the same group name share single underlying 'physical' cache (partition set),
+ but are logically isolated.
+
+ Grouping caches reduces overall overhead, since internal data structures are shared.
++++
+|[[invalidate]]`@invalidate`|`Boolean`|+++
+Sets invalidation flag for near cache entries in this transaction. Default is <code>false</code>.
++++
+|[[maxConcurrentAsyncOperations]]`@maxConcurrentAsyncOperations`|`Number (int)`|+++
+Sets maximum number of concurrent asynchronous operations.
++++
+|[[maxQueryInteratorsCount]]`@maxQueryInteratorsCount`|`Number (int)`|+++
+Sets maximum number of query iterators that can be stored.
++++
+|[[name]]`@name`|`String`|+++
+Sets cache name.
++++
+|[[onheapCacheEnabled]]`@onheapCacheEnabled`|`Boolean`|+++
+Configures on-heap cache for the off-heap based page memory.
++++
+|[[partitionLossPolicy]]`@partitionLossPolicy`|`String`|+++
+Sets partition loss policy. This policy defines how Ignite will react to a situation when all nodes for
+ some partition leave the cluster.
++++
+|[[readFromBackup]]`@readFromBackup`|`Boolean`|+++
+Sets read from backup flag.
++++
+|[[rebalanceDelay]]`@rebalanceDelay`|`Number (long)`|+++
+Sets rebalance delay.
++++
+|[[rebalanceMode]]`@rebalanceMode`|`String`|+++
+Sets cache rebalance mode.
++++
+|[[rebalanceOrder]]`@rebalanceOrder`|`Number (int)`|+++
+Sets cache rebalance order.
++++
+|[[writeSynchronizationMode]]`@writeSynchronizationMode`|`String`|+++
+Sets write synchronization mode.
++++
+|===
+
+[[IgniteDiscoveryOptions]]
+== IgniteDiscoveryOptions
+
+++++
+++++
+'''
+
+[cols=">25%,25%,50%"]
+[frame="topbot"]
+|===
+^|Name | Type ^| Description
+|[[properties]]`@properties`|`Json object`|+++
+Sets the properties used to configure the discovery implementation.
++++
+|[[type]]`@type`|`String`|+++
+Sets the discovery implementation type.
+ Defaults to TcpDiscoveryMulticastIpFinder
++++
+|===
+
+[[IgniteOptions]]
+== IgniteOptions
+
+++++
+++++
+'''
+
+[cols=">25%,25%,50%"]
+[frame="topbot"]
+|===
+^|Name | Type ^| Description
+|[[connectTimeout]]`@connectTimeout`|`Number (long)`|+++
+Sets connect timeout used when establishing connection
+ with remote nodes.
++++
+|[[connectionsPerNode]]`@connectionsPerNode`|`Number (int)`|+++
+Sets number of connections to each remote node.
++++
+|[[idleConnectionTimeout]]`@idleConnectionTimeout`|`Number (long)`|+++
+Sets maximum idle connection timeout upon which a connection
+ to client will be closed.
++++
+|[[includeEventTypes]]`@includeEventTypes`|`Array of String`|+++
+Sets array of event types, which will be recorded by link.
+ Note, that either the include event types or the exclude event types can be established.
++++
+|[[localHost]]`@localHost`|`String`|+++
+Sets system-wide local address or host for all Ignite components to bind to. If provided it will
+ override all default local bind settings within Ignite or any of its SPIs.
++++
+|[[localPort]]`@localPort`|`Number (int)`|+++
+Sets local port for socket binding.
++++
+|[[maxConnectTimeout]]`@maxConnectTimeout`|`Number (long)`|+++
+Sets maximum connect timeout. If handshake is not established within connect timeout,
+ then SPI tries to repeat handshake procedure with increased connect timeout.
+ Connect timeout can grow till maximum timeout value,
+ if maximum timeout value is reached then the handshake is considered as failed.
++++
+|[[metricsLogFrequency]]`@metricsLogFrequency`|`Number (long)`|+++
+Sets frequency of metrics log print out.
++++
+|[[reconnectCount]]`@reconnectCount`|`Number (int)`|+++
+Sets maximum number of reconnect attempts used when establishing connection
+ with remote nodes.
++++
+|===
+
+[[IgniteSslOptions]]
+== IgniteSslOptions
+
+++++
+++++
+'''
+
+[cols=">25%,25%,50%"]
+[frame="topbot"]
+|===
+^|Name | Type ^| Description
+|[[keyAlgorithm]]`@keyAlgorithm`|`String`|+++
+Sets key manager algorithm that will be used to create a key manager. Notice that in most cased default value
+ suites well, however, on Android platform this value need to be set to <tt>X509<tt/>.
++++
+|[[keyStoreFilePath]]`@keyStoreFilePath`|`String`|+++
+Sets path to the key store file. This is a mandatory parameter since
+ ssl context could not be initialized without key manager.
++++
+|[[keyStorePassword]]`@keyStorePassword`|`String`|+++
+Sets key store password.
++++
+|[[keyStoreType]]`@keyStoreType`|`String`|+++
+Sets key store type used in context initialization.
++++
+|[[protocol]]`@protocol`|`String`|+++
+Sets protocol for secure transport.
++++
+|[[trustAll]]`@trustAll`|`Boolean`|+++
+When using ssl, trust ALL certificates.
+ WARNING Trusting ALL certificates will open you up to potential security issues such as MITM attacks.
++++
+|[[trustStoreFilePath]]`@trustStoreFilePath`|`String`|+++
+Sets path to the trust store file.
++++
+|[[trustStorePassword]]`@trustStorePassword`|`String`|+++
+Sets trust store password.
++++
+|[[trustStoreType]]`@trustStoreType`|`String`|+++
+Sets trust store type used in context initialization.
++++
+|===
+

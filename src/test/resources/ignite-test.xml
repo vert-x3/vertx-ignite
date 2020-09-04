@@ -8,7 +8,7 @@
                            http://www.springframework.org/schema/util
                            http://www.springframework.org/schema/util/spring-util.xsd">
 
-<bean class="org.apache.ignite.configuration.IgniteConfiguration">
+  <bean class="org.apache.ignite.configuration.IgniteConfiguration">
 
     <property name="localHost" value="127.0.0.1"/>
 
@@ -60,18 +60,18 @@
       </list>
     </property>
 
-  <property name="includeEventTypes">
-    <list>
-      <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_PUT"/>
-      <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED"/>
-    </list>
-  </property>
+    <property name="includeEventTypes">
+      <list>
+        <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_PUT"/>
+        <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED"/>
+      </list>
+    </property>
 
-  <!-- Logging configuration. -->
-  <property name="gridLogger">
-    <bean class="org.apache.ignite.logger.slf4j.Slf4jLogger"/>
-  </property>
+    <!-- Logging configuration. -->
+    <property name="gridLogger">
+      <bean class="io.vertx.spi.cluster.ignite.impl.VertxLogger"/>
+    </property>
 
-  <property name="metricsLogFrequency" value="0"/>
-</bean>
+    <property name="metricsLogFrequency" value="0"/>
+  </bean>
 </beans>
