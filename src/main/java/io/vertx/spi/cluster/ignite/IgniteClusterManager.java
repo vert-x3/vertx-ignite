@@ -284,30 +284,31 @@ public class IgniteClusterManager implements ClusterManager {
           nodeId = nodeId(ignite.cluster().localNode());
 
           eventListener = event -> {
-            if (!active) {
+            if (!isActive()) {
               return false;
             }
 
             vertx.executeBlocking(f -> {
-              if (isActive()) {
-                switch (event.type()) {
-                  case EVT_NODE_JOINED:
-                    if (nodeListener != null) {
-                      nodeListener.nodeAdded(nodeId(((DiscoveryEvent) event).eventNode()));
-                    }
-                    break;
-                  case EVT_NODE_LEFT:
-                  case EVT_NODE_FAILED:
-                    String id = nodeId(((DiscoveryEvent) event).eventNode());
-                    if (isMaster()) {
-                      cleanSubs(id);
-                      cleanNodeInfos(id);
-                    }
-                    if (nodeListener != null) {
+              switch (event.type()) {
+                case EVT_NODE_JOINED:
+                  if (nodeListener != null) {
+                    nodeListener.nodeAdded(nodeId(((DiscoveryEvent) event).eventNode()));
+                  }
+                  break;
+                case EVT_NODE_LEFT:
+                case EVT_NODE_FAILED:
+                  String id = nodeId(((DiscoveryEvent) event).eventNode());
+                  if (cleanNodeInfos(id)) {
+                    cleanSubs(id);
+                  }
+                  if (nodeListener != null) {
+                    try {
                       nodeListener.nodeLeft(id);
+                    } catch (Exception e) {
+                      //ignore
                     }
-                    break;
-                }
+                  }
+                  break;
               }
               f.complete();
             }, null);
@@ -316,7 +317,7 @@ public class IgniteClusterManager implements ClusterManager {
           };
 
           ignite.events().localListen(eventListener, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED);
-          subsMapHelper = new SubsMapHelper(ignite, nodeSelector);
+          subsMapHelper = new SubsMapHelper(ignite, nodeSelector, vertx);
           nodeInfoMap = ignite.getOrCreateCache("__vertx.nodeInfo");
 
           prom.complete();
@@ -336,6 +337,7 @@ public class IgniteClusterManager implements ClusterManager {
             if (eventListener != null) {
               ignite.events().stopLocalListen(eventListener, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED);
             }
+            subsMapHelper.leave(ignite);
             if (!customIgnite) {
               ignite.close();
             }
@@ -378,12 +380,6 @@ public class IgniteClusterManager implements ClusterManager {
     }, false, promise);
   }
 
-  private boolean isMaster() {
-    return nodeId(ignite.cluster()
-      .forOldest().node())
-      .equals(nodeId);
-  }
-
   private void cleanSubs(String id) {
     try {
       subsMapHelper.removeAllForNode(id);
@@ -392,12 +388,13 @@ public class IgniteClusterManager implements ClusterManager {
     }
   }
 
-  private void cleanNodeInfos(String nid) {
+  private boolean cleanNodeInfos(String nid) {
     try {
-      nodeInfoMap.remove(nid);
+      return nodeInfoMap.remove(nid);
     } catch (IllegalStateException | CacheException e) {
       //ignore
     }
+    return false;
   }
 
   private void setNodeId(IgniteConfiguration cfg) {

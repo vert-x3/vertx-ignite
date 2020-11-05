@@ -18,6 +18,7 @@ package io.vertx.spi.cluster.ignite.impl;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.VertxException;
+import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.spi.cluster.NodeSelector;
 import io.vertx.core.spi.cluster.RegistrationInfo;
 import io.vertx.core.spi.cluster.RegistrationUpdateEvent;
@@ -32,6 +33,7 @@ import javax.cache.Cache;
 import javax.cache.CacheException;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
@@ -44,26 +46,13 @@ import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED;
  */
 public class SubsMapHelper {
   private final IgniteCache<IgniteRegistrationInfo, Boolean> map;
+  private final IgnitePredicate<Event> eventListener;
 
-  public SubsMapHelper(Ignite ignite, NodeSelector nodeSelector) {
+  public SubsMapHelper(Ignite ignite, NodeSelector nodeSelector, VertxInternal vertxInternal) {
     map = ignite.getOrCreateCache("__vertx.subs");
+    eventListener = event -> listen(event, nodeSelector, vertxInternal);
 
-    ignite.events().localListen((IgnitePredicate<Event>) event -> {
-      if (!(event instanceof CacheEvent)) {
-        return true;
-      }
-      CacheEvent cacheEvent = (CacheEvent) event;
-      if (!Objects.equals(cacheEvent.cacheName(), map.getName())) {
-        return true;
-      }
-      String address = cacheEvent.<IgniteRegistrationInfo>key().address();
-      Promise<List<RegistrationInfo>> promise = Promise.promise();
-      promise.future().onSuccess(registrationInfos -> {
-        nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, registrationInfos));
-      });
-      get(address, promise);
-      return true;
-    }, EVT_CACHE_OBJECT_PUT, EVT_CACHE_OBJECT_REMOVED);
+    ignite.events().localListen(eventListener, EVT_CACHE_OBJECT_PUT, EVT_CACHE_OBJECT_REMOVED);
   }
 
   public void get(String address, Promise<List<RegistrationInfo>> promise) {
@@ -98,16 +87,38 @@ public class SubsMapHelper {
   }
 
   public void removeAllForNode(String nodeId) {
-    List<IgniteRegistrationInfo> toRemove = map.query(new ScanQuery<IgniteRegistrationInfo, Boolean>((k, v) -> k.registrationInfo().nodeId().equals(nodeId)))
+    Set<IgniteRegistrationInfo> toRemove = map.query(new ScanQuery<IgniteRegistrationInfo, Boolean>((k, v) -> k.registrationInfo().nodeId().equals(nodeId)))
       .getAll().stream()
       .map(Cache.Entry::getKey)
-      .collect(Collectors.toList());
-    for (IgniteRegistrationInfo info : toRemove) {
-      try {
-        map.remove(info);
-      } catch (IllegalStateException | CacheException t) {
-        //ignore
-      }
+      .collect(Collectors.toSet());
+    try {
+      map.removeAll(toRemove);
+    } catch (IllegalStateException | CacheException t) {
+      //ignore
+    }
+  }
+
+  boolean listen(Event event, final NodeSelector nodeSelector, final VertxInternal vertxInternal) {
+    if (!(event instanceof CacheEvent)) {
+      return true;
+    }
+    CacheEvent cacheEvent = (CacheEvent) event;
+    if (!Objects.equals(cacheEvent.cacheName(), map.getName())) {
+      return true;
+    }
+    vertxInternal.<List<RegistrationInfo>>executeBlocking(promise -> {
+      String address = cacheEvent.<IgniteRegistrationInfo>key().address();
+      promise.future().onSuccess(registrationInfos -> {
+        nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, registrationInfos));
+      });
+      get(address, promise);
+    });
+    return true;
+  }
+
+  public void leave(Ignite ignite) {
+    if (eventListener != null) {
+      ignite.events().stopLocalListen(eventListener, EVT_CACHE_OBJECT_PUT, EVT_CACHE_OBJECT_REMOVED);
     }
   }
 }
