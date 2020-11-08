@@ -34,6 +34,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.plugin.segmentation.SegmentationPolicy;
 
 import javax.cache.CacheException;
 import javax.cache.expiry.Duration;
@@ -279,6 +280,7 @@ public class IgniteClusterManager implements ClusterManager {
           lockReleaseExec = Executors.newCachedThreadPool(r -> new Thread(r, "vertx-ignite-service-release-lock-thread"));
 
           if (!customIgnite) {
+            cfg.setSegmentationPolicy(SegmentationPolicy.NOOP);
             ignite = Ignition.start(cfg);
           }
           nodeId = nodeId(ignite.cluster().localNode());
@@ -289,15 +291,16 @@ public class IgniteClusterManager implements ClusterManager {
             }
 
             vertx.executeBlocking(f -> {
+              String id = nodeId(((DiscoveryEvent) event).eventNode());
               switch (event.type()) {
                 case EVT_NODE_JOINED:
                   if (nodeListener != null) {
-                    nodeListener.nodeAdded(nodeId(((DiscoveryEvent) event).eventNode()));
+                    nodeListener.nodeAdded(id);
                   }
+                  log.info("node " + id + " joined the cluster");
                   break;
                 case EVT_NODE_LEFT:
                 case EVT_NODE_FAILED:
-                  String id = nodeId(((DiscoveryEvent) event).eventNode());
                   if (cleanNodeInfos(id)) {
                     cleanSubs(id);
                   }
@@ -308,6 +311,15 @@ public class IgniteClusterManager implements ClusterManager {
                       //ignore
                     }
                   }
+                  log.info("node " + id + " left the cluster");
+                  break;
+                case EVT_NODE_SEGMENTED:
+                  if(customIgnite) {
+                    log.info("node got segmented");
+                  } else {
+                    log.warn("node got segmented and will be shut down");
+                    vertx.close();
+                  }
                   break;
               }
               f.complete();
@@ -316,7 +328,7 @@ public class IgniteClusterManager implements ClusterManager {
             return true;
           };
 
-          ignite.events().localListen(eventListener, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED);
+          ignite.events().localListen(eventListener, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED, EVT_NODE_SEGMENTED);
           subsMapHelper = new SubsMapHelper(ignite, nodeSelector, vertx);
           nodeInfoMap = ignite.getOrCreateCache("__vertx.nodeInfo");
 
