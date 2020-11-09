@@ -298,6 +298,7 @@ public class IgniteClusterManager implements ClusterManager {
                     nodeListener.nodeAdded(id);
                   }
                   log.info("node " + id + " joined the cluster");
+                  f.complete();
                   break;
                 case EVT_NODE_LEFT:
                 case EVT_NODE_FAILED:
@@ -312,17 +313,20 @@ public class IgniteClusterManager implements ClusterManager {
                     }
                   }
                   log.info("node " + id + " left the cluster");
+                  f.complete();
                   break;
                 case EVT_NODE_SEGMENTED:
                   if(customIgnite) {
-                    log.info("node got segmented");
+                    log.warn("node got segmented");
                   } else {
                     log.warn("node got segmented and will be shut down");
                     vertx.close();
                   }
+                  f.fail(new IllegalStateException("node is stopped"));
                   break;
+                default:
+                  f.fail("event not known");
               }
-              f.complete();
             }, null);
 
             return true;
