@@ -78,6 +78,8 @@ public class IgniteClusterManager implements ClusterManager {
   // Workaround for https://github.com/vert-x3/vertx-ignite/issues/63
   private static final ExpiryPolicy DEFAULT_EXPIRY_POLICY = new ClearExpiryPolicy();
 
+  private static final int[] IGNITE_EVENTS = new int[]{EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED, EVT_NODE_SEGMENTED};
+
   private VertxInternal vertx;
   private NodeSelector nodeSelector;
 
@@ -316,7 +318,7 @@ public class IgniteClusterManager implements ClusterManager {
                   f.complete();
                   break;
                 case EVT_NODE_SEGMENTED:
-                  if(customIgnite) {
+                  if (customIgnite) {
                     log.warn("node got segmented");
                   } else {
                     log.warn("node got segmented and will be shut down");
@@ -332,7 +334,7 @@ public class IgniteClusterManager implements ClusterManager {
             return true;
           };
 
-          ignite.events().localListen(eventListener, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED, EVT_NODE_SEGMENTED);
+          ignite.events().localListen(eventListener, IGNITE_EVENTS);
           subsMapHelper = new SubsMapHelper(ignite, nodeSelector, vertx);
           nodeInfoMap = ignite.getOrCreateCache("__vertx.nodeInfo");
 
@@ -351,7 +353,7 @@ public class IgniteClusterManager implements ClusterManager {
           lockReleaseExec.shutdown();
           try {
             if (eventListener != null) {
-              ignite.events().stopLocalListen(eventListener, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED);
+              ignite.events().stopLocalListen(eventListener, IGNITE_EVENTS);
             }
             subsMapHelper.leave(ignite);
             if (!customIgnite) {

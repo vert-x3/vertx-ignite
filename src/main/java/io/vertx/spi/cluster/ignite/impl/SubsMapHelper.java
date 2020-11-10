@@ -37,14 +37,16 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
-import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_PUT;
-import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED;
+import static org.apache.ignite.events.EventType.*;
+import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
 
 /**
  * @author Thomas Segismont
  * @author Lukas Prettenthaler
  */
 public class SubsMapHelper {
+  private static final int[] CACHE_EVENTS = new int[]{EVT_CACHE_OBJECT_PUT, EVT_CACHE_OBJECT_REMOVED};
+
   private final IgniteCache<IgniteRegistrationInfo, Boolean> map;
   private final IgnitePredicate<Event> eventListener;
 
@@ -52,7 +54,7 @@ public class SubsMapHelper {
     map = ignite.getOrCreateCache("__vertx.subs");
     eventListener = event -> listen(event, nodeSelector, vertxInternal);
 
-    ignite.events().localListen(eventListener, EVT_CACHE_OBJECT_PUT, EVT_CACHE_OBJECT_REMOVED);
+    ignite.events().localListen(eventListener, CACHE_EVENTS);
   }
 
   public void get(String address, Promise<List<RegistrationInfo>> promise) {
@@ -118,7 +120,7 @@ public class SubsMapHelper {
 
   public void leave(Ignite ignite) {
     if (eventListener != null) {
-      ignite.events().stopLocalListen(eventListener, EVT_CACHE_OBJECT_PUT, EVT_CACHE_OBJECT_REMOVED);
+      ignite.events().stopLocalListen(eventListener, CACHE_EVENTS);
     }
   }
 }
