@@ -33,7 +33,7 @@ import javax.cache.Cache;
 import javax.cache.CacheException;
 import java.util.List;
 import java.util.Objects;
-import java.util.TreeSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
@@ -88,10 +88,10 @@ public class SubsMapHelper {
   }
 
   public void removeAllForNode(String nodeId) {
-    TreeSet<IgniteRegistrationInfo> toRemove = map.query(new ScanQuery<IgniteRegistrationInfo, Boolean>((k, v) -> k.registrationInfo().nodeId().equals(nodeId)))
+    Set<IgniteRegistrationInfo> toRemove = map.query(new ScanQuery<IgniteRegistrationInfo, Boolean>((k, v) -> k.registrationInfo().nodeId().equals(nodeId)))
       .getAll().stream()
       .map(Cache.Entry::getKey)
-      .collect(Collectors.toCollection(TreeSet::new));
+      .collect(Collectors.toSet());
     try {
       map.removeAll(toRemove);
     } catch (IllegalStateException | CacheException t) {
