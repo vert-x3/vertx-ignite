@@ -299,7 +299,7 @@ public class IgniteClusterManager implements ClusterManager {
                   if (nodeListener != null) {
                     nodeListener.nodeAdded(id);
                   }
-                  log.info("node " + id + " joined the cluster");
+                  log.debug("node " + id + " joined the cluster");
                   f.complete();
                   break;
                 case EVT_NODE_LEFT:
@@ -314,7 +314,7 @@ public class IgniteClusterManager implements ClusterManager {
                       //ignore
                     }
                   }
-                  log.info("node " + id + " left the cluster");
+                  log.debug("node " + id + " left the cluster");
                   f.complete();
                   break;
                 case EVT_NODE_SEGMENTED:

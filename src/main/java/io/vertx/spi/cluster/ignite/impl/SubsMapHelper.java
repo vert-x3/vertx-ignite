@@ -38,7 +38,6 @@ import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.events.EventType.*;
-import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
 
 /**
  * @author Thomas Segismont
