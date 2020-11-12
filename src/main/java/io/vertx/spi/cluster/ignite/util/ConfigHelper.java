@@ -3,8 +3,6 @@ package io.vertx.spi.cluster.ignite.util;
 import io.vertx.core.VertxException;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
-import io.vertx.spi.cluster.ignite.IgniteOptions;
-import io.vertx.spi.cluster.ignite.impl.VertxLogger;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgnitionEx;
@@ -28,13 +26,6 @@ public class ConfigHelper {
     } catch (IgniteCheckedException e) {
       throw new VertxException(e);
     }
-  }
-
-  public static IgniteConfiguration loadConfiguration(JsonObject json) {
-    IgniteOptions options = new IgniteOptions(json);
-    IgniteConfiguration config = options.toConfig();
-    config.setGridLogger(new VertxLogger());
-    return config;
   }
 
   public static IgniteConfiguration lookupXmlConfiguration(Class<?> clazz, String... files) {

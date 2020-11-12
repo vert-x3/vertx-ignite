@@ -87,6 +87,7 @@ public class IgniteClusterManager implements ClusterManager {
   private IgniteConfiguration cfg;
   private Ignite ignite;
   private boolean customIgnite;
+  private boolean shutdownOnSegmentation;
 
   private String nodeId;
   private NodeInfo nodeInfo;
@@ -115,7 +116,10 @@ public class IgniteClusterManager implements ClusterManager {
       }
     }
     if (cfg == null) {
-      cfg = ConfigHelper.loadConfiguration(ConfigHelper.lookupJsonConfiguration(this.getClass(), CONFIG_FILE, DEFAULT_CONFIG_FILE));
+      IgniteOptions options = new IgniteOptions(ConfigHelper.lookupJsonConfiguration(this.getClass(), CONFIG_FILE, DEFAULT_CONFIG_FILE));
+      shutdownOnSegmentation = options.isShutdownOnSegmentation();
+      cfg = options.toConfig()
+        .setGridLogger(new VertxLogger());
     }
     setNodeId(cfg);
   }
@@ -155,7 +159,11 @@ public class IgniteClusterManager implements ClusterManager {
   @SuppressWarnings("unused")
   public IgniteClusterManager(JsonObject jsonConfig) {
     System.setProperty("IGNITE_NO_SHUTDOWN_HOOK", "true");
-    this.cfg = ConfigHelper.loadConfiguration(jsonConfig);
+    IgniteOptions options = new IgniteOptions(jsonConfig);
+    this.shutdownOnSegmentation = options.isShutdownOnSegmentation();
+    this.cfg = options.toConfig()
+      .setGridLogger(new VertxLogger());
+
     setNodeId(cfg);
   }
 
@@ -320,7 +328,7 @@ public class IgniteClusterManager implements ClusterManager {
                   f.complete();
                   break;
                 case EVT_NODE_SEGMENTED:
-                  if (customIgnite) {
+                  if (customIgnite || !shutdownOnSegmentation) {
                     log.warn("node got segmented");
                   } else {
                     log.warn("node got segmented and will be shut down");

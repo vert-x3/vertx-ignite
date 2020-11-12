@@ -145,6 +145,10 @@ Sets frequency of metrics log print out.
 Sets maximum number of reconnect attempts used when establishing connection
  with remote nodes.
 +++
+|[[shutdownOnSegmentation]]`@shutdownOnSegmentation`|`Boolean`|+++
+Sets that vertx will be shutdown when the cache goes into segmented state.
+ Defaults to true
++++
 |===
 
 [[IgniteSslOptions]]

@@ -16,6 +16,7 @@
 package io.vertx.spi.cluster.ignite;
 
 import io.vertx.codegen.annotations.DataObject;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -44,6 +45,7 @@ public class IgniteOptions {
   private IgniteDiscoveryOptions discoveryOptions;
   private List<IgniteCacheOptions> cacheConfiguration;
   private IgniteSslOptions sslOptions;
+  private boolean shutdownOnSegmentation;
 
   /**
    * Default constructor
@@ -60,6 +62,7 @@ public class IgniteOptions {
     discoveryOptions = new IgniteDiscoveryOptions();
     cacheConfiguration = new ArrayList<>();
     sslOptions = new IgniteSslOptions();
+    shutdownOnSegmentation = true;
   }
 
   /**
@@ -80,6 +83,7 @@ public class IgniteOptions {
     this.discoveryOptions = options.discoveryOptions;
     this.cacheConfiguration = options.cacheConfiguration;
     this.sslOptions = options.sslOptions;
+    this.shutdownOnSegmentation = options.shutdownOnSegmentation;
   }
 
   /**
@@ -328,13 +332,29 @@ public class IgniteOptions {
   }
 
   /**
-   * Sets SSL options that will be used for creating a secure socket  layer.
+   * Sets SSL options that will be used for creating a secure socket layer.
    *
    * @param sslOptions Ssl options.
    * @return reference to this, for fluency
    */
   public IgniteOptions setSslContextFactory(IgniteSslOptions sslOptions) {
     this.sslOptions = sslOptions;
+    return this;
+  }
+
+  public boolean isShutdownOnSegmentation() {
+    return shutdownOnSegmentation;
+  }
+
+  /**
+   * Sets that vertx will be shutdown when the cache goes into segmented state.
+   * Defaults to true
+   *
+   * @param shutdownOnSegmentation boolean flag.
+   * @return reference to this, for fluency
+   */
+  public IgniteOptions setShutdownOnSegmentation(boolean shutdownOnSegmentation) {
+    this.shutdownOnSegmentation = shutdownOnSegmentation;
     return this;
   }
 
