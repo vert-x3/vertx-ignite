@@ -33,6 +33,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.segmentation.SegmentationPolicy;
 
@@ -283,6 +284,7 @@ public class IgniteClusterManager implements ClusterManager {
 
           if (!customIgnite) {
             cfg.setSegmentationPolicy(SegmentationPolicy.NOOP);
+            cfg.setFailureHandler(new StopNodeFailureHandler());
             ignite = Ignition.start(cfg);
           }
           nodeId = nodeId(ignite.cluster().localNode());
