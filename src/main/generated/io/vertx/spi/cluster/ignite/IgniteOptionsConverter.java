@@ -81,6 +81,11 @@ public class IgniteOptionsConverter {
             obj.setReconnectCount(((Number)member.getValue()).intValue());
           }
           break;
+        case "shutdownOnSegmentation":
+          if (member.getValue() instanceof Boolean) {
+            obj.setShutdownOnSegmentation((Boolean)member.getValue());
+          }
+          break;
         case "sslContextFactory":
           if (member.getValue() instanceof JsonObject) {
             obj.setSslContextFactory(new io.vertx.spi.cluster.ignite.IgniteSslOptions((io.vertx.core.json.JsonObject)member.getValue()));
@@ -118,6 +123,7 @@ public class IgniteOptionsConverter {
     json.put("maxConnectTimeout", obj.getMaxConnectTimeout());
     json.put("metricsLogFrequency", obj.getMetricsLogFrequency());
     json.put("reconnectCount", obj.getReconnectCount());
+    json.put("shutdownOnSegmentation", obj.isShutdownOnSegmentation());
     if (obj.getSslContextFactory() != null) {
       json.put("sslContextFactory", obj.getSslContextFactory().toJson());
     }

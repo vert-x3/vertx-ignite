@@ -24,5 +24,6 @@
     }
   ],
   "includeEventTypes": ["EVT_CACHE_OBJECT_PUT", "EVT_CACHE_OBJECT_REMOVED"],
-  "metricsLogFrequency": 0
+  "metricsLogFrequency": 0,
+  "shutdownOnSegmentation": false
 }

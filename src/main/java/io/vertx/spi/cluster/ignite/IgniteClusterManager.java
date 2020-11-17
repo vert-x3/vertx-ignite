@@ -33,7 +33,9 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.plugin.segmentation.SegmentationPolicy;
 
 import javax.cache.CacheException;
 import javax.cache.expiry.Duration;
@@ -77,12 +79,15 @@ public class IgniteClusterManager implements ClusterManager {
   // Workaround for https://github.com/vert-x3/vertx-ignite/issues/63
   private static final ExpiryPolicy DEFAULT_EXPIRY_POLICY = new ClearExpiryPolicy();
 
+  private static final int[] IGNITE_EVENTS = new int[]{EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED, EVT_NODE_SEGMENTED};
+
   private VertxInternal vertx;
   private NodeSelector nodeSelector;
 
   private IgniteConfiguration cfg;
   private Ignite ignite;
   private boolean customIgnite;
+  private boolean shutdownOnSegmentation;
 
   private String nodeId;
   private NodeInfo nodeInfo;
@@ -111,7 +116,10 @@ public class IgniteClusterManager implements ClusterManager {
       }
     }
     if (cfg == null) {
-      cfg = ConfigHelper.loadConfiguration(ConfigHelper.lookupJsonConfiguration(this.getClass(), CONFIG_FILE, DEFAULT_CONFIG_FILE));
+      IgniteOptions options = new IgniteOptions(ConfigHelper.lookupJsonConfiguration(this.getClass(), CONFIG_FILE, DEFAULT_CONFIG_FILE));
+      shutdownOnSegmentation = options.isShutdownOnSegmentation();
+      cfg = options.toConfig()
+        .setGridLogger(new VertxLogger());
     }
     setNodeId(cfg);
   }
@@ -151,7 +159,11 @@ public class IgniteClusterManager implements ClusterManager {
   @SuppressWarnings("unused")
   public IgniteClusterManager(JsonObject jsonConfig) {
     System.setProperty("IGNITE_NO_SHUTDOWN_HOOK", "true");
-    this.cfg = ConfigHelper.loadConfiguration(jsonConfig);
+    IgniteOptions options = new IgniteOptions(jsonConfig);
+    this.shutdownOnSegmentation = options.isShutdownOnSegmentation();
+    this.cfg = options.toConfig()
+      .setGridLogger(new VertxLogger());
+
     setNodeId(cfg);
   }
 
@@ -279,44 +291,61 @@ public class IgniteClusterManager implements ClusterManager {
           lockReleaseExec = Executors.newCachedThreadPool(r -> new Thread(r, "vertx-ignite-service-release-lock-thread"));
 
           if (!customIgnite) {
+            cfg.setSegmentationPolicy(SegmentationPolicy.NOOP);
+            cfg.setFailureHandler(new StopNodeFailureHandler());
             ignite = Ignition.start(cfg);
           }
           nodeId = nodeId(ignite.cluster().localNode());
 
           eventListener = event -> {
-            if (!active) {
+            if (!isActive()) {
               return false;
             }
 
             vertx.executeBlocking(f -> {
-              if (isActive()) {
-                switch (event.type()) {
-                  case EVT_NODE_JOINED:
-                    if (nodeListener != null) {
-                      nodeListener.nodeAdded(nodeId(((DiscoveryEvent) event).eventNode()));
-                    }
-                    break;
-                  case EVT_NODE_LEFT:
-                  case EVT_NODE_FAILED:
-                    String id = nodeId(((DiscoveryEvent) event).eventNode());
-                    if (isMaster()) {
-                      cleanSubs(id);
-                      cleanNodeInfos(id);
-                    }
-                    if (nodeListener != null) {
+              String id = nodeId(((DiscoveryEvent) event).eventNode());
+              switch (event.type()) {
+                case EVT_NODE_JOINED:
+                  if (nodeListener != null) {
+                    nodeListener.nodeAdded(id);
+                  }
+                  log.debug("node " + id + " joined the cluster");
+                  f.complete();
+                  break;
+                case EVT_NODE_LEFT:
+                case EVT_NODE_FAILED:
+                  if (cleanNodeInfos(id)) {
+                    cleanSubs(id);
+                  }
+                  if (nodeListener != null) {
+                    try {
                       nodeListener.nodeLeft(id);
+                    } catch (Exception e) {
+                      //ignore
                     }
-                    break;
-                }
+                  }
+                  log.debug("node " + id + " left the cluster");
+                  f.complete();
+                  break;
+                case EVT_NODE_SEGMENTED:
+                  if (customIgnite || !shutdownOnSegmentation) {
+                    log.warn("node got segmented");
+                  } else {
+                    log.warn("node got segmented and will be shut down");
+                    vertx.close();
+                  }
+                  f.fail(new IllegalStateException("node is stopped"));
+                  break;
+                default:
+                  f.fail("event not known");
               }
-              f.complete();
             }, null);
 
             return true;
           };
 
-          ignite.events().localListen(eventListener, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED);
-          subsMapHelper = new SubsMapHelper(ignite, nodeSelector);
+          ignite.events().localListen(eventListener, IGNITE_EVENTS);
+          subsMapHelper = new SubsMapHelper(ignite, nodeSelector, vertx);
           nodeInfoMap = ignite.getOrCreateCache("__vertx.nodeInfo");
 
           prom.complete();
@@ -334,8 +363,9 @@ public class IgniteClusterManager implements ClusterManager {
           lockReleaseExec.shutdown();
           try {
             if (eventListener != null) {
-              ignite.events().stopLocalListen(eventListener, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED);
+              ignite.events().stopLocalListen(eventListener, IGNITE_EVENTS);
             }
+            subsMapHelper.leave(ignite);
             if (!customIgnite) {
               ignite.close();
             }
@@ -378,12 +408,6 @@ public class IgniteClusterManager implements ClusterManager {
     }, false, promise);
   }
 
-  private boolean isMaster() {
-    return nodeId(ignite.cluster()
-      .forOldest().node())
-      .equals(nodeId);
-  }
-
   private void cleanSubs(String id) {
     try {
       subsMapHelper.removeAllForNode(id);
@@ -392,12 +416,13 @@ public class IgniteClusterManager implements ClusterManager {
     }
   }
 
-  private void cleanNodeInfos(String nid) {
+  private boolean cleanNodeInfos(String nid) {
     try {
-      nodeInfoMap.remove(nid);
+      return nodeInfoMap.remove(nid);
     } catch (IllegalStateException | CacheException e) {
       //ignore
     }
+    return false;
   }
 
   private void setNodeId(IgniteConfiguration cfg) {
