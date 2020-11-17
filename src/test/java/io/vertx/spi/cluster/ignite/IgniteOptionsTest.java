@@ -41,6 +41,7 @@ public class IgniteOptionsTest {
     assertNull(options.getSslContextFactory().getKeyStoreFilePath());
     assertNull(options.getSslContextFactory().getTrustStoreFilePath());
     assertFalse(options.getSslContextFactory().isTrustAll());
+    assertTrue(options.isShutdownOnSegmentation());
   }
 
   @Test
@@ -65,6 +66,7 @@ public class IgniteOptionsTest {
     assertNull(options.getSslContextFactory().getKeyStoreFilePath());
     assertNull(options.getSslContextFactory().getTrustStoreFilePath());
     assertFalse(options.getSslContextFactory().isTrustAll());
+    assertTrue(options.isShutdownOnSegmentation());
   }
 
   private void checkConfig(IgniteOptions options, IgniteConfiguration config) {
@@ -185,6 +187,7 @@ public class IgniteOptionsTest {
     assertEquals(options.getReconnectCount(), json.getInteger("reconnectCount").intValue());
     assertEquals(options.getIncludeEventTypes(), json.getJsonArray("includeEventTypes").getList());
     assertEquals(options.getMetricsLogFrequency(), json.getLong("metricsLogFrequency").longValue());
+    assertEquals(options.isShutdownOnSegmentation(), json.getBoolean("shutdownOnSegmentation"));
     assertEquals(options.getDiscoverySpi().getType(), json.getJsonObject("discoverySpi").getString("type"));
     assertEquals(options.getDiscoverySpi().getProperties().getLong("joinTimeout"), json.getJsonObject("discoverySpi").getJsonObject("properties").getLong("joinTimeout"));
     assertEquals(options.getSslContextFactory().getProtocol(), json.getJsonObject("sslContextFactory").getString("protocol"));
@@ -235,6 +238,7 @@ public class IgniteOptionsTest {
     "  \"maxConnectTimeout\": 200000,\n" +
     "  \"metricsLogFrequency\": 10,\n" +
     "  \"reconnectCount\": 20,\n" +
+    "  \"shutdownOnSegmentation\": true,\n" +
     "  \"discoverySpi\": {\n" +
     "    \"type\": \"TcpDiscoveryVmIpFinder\",\n" +
     "    \"properties\": {\n" +
