@@ -1,6 +1,6 @@
 = Apache Ignite Cluster Manager
 
-image:https://travis-ci.org/vert-x3/vertx-ignite.svg?branch=master["Build Status", link="https://travis-ci.org/vert-x3/vertx-ignite"]
+image:https://github.com/vert-x3/vertx-ignite/workflows/CI/badge.svg?branch=master["Build Status", link="https://github.com/vert-x3/vertx-ignire/actions?query=workflow%3ACI"]
 
 This is a cluster manager implementation for Vert.x that uses http://ignite.apache.org/index.html[Apache Ignite].
 
