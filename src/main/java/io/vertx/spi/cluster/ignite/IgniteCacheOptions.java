@@ -20,6 +20,11 @@ import io.vertx.core.json.JsonObject;
 import org.apache.ignite.cache.*;
 import org.apache.ignite.configuration.CacheConfiguration;
 
+import javax.cache.configuration.Factory;
+import javax.cache.expiry.*;
+
+import java.util.concurrent.TimeUnit;
+
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.*;
 import static org.apache.ignite.configuration.CacheConfiguration.*;
 
@@ -35,7 +40,6 @@ public class IgniteCacheOptions {
   private CacheAtomicityMode atomicityMode;
   private CacheWriteSynchronizationMode writeSynchronizationMode;
   private boolean copyOnRead;
-  private long defaultLockTimeout;
   private boolean eagerTtl;
   private boolean encryptionEnabled;
   private String groupName;
@@ -48,6 +52,7 @@ public class IgniteCacheOptions {
   private long rebalanceDelay;
   private int maxQueryInteratorsCount;
   private boolean eventsDisabled;
+  private JsonObject expiryPolicy;
 
   /**
    * Default constructor
@@ -59,7 +64,6 @@ public class IgniteCacheOptions {
     backups = DFLT_BACKUPS;
     readFromBackup = DFLT_READ_FROM_BACKUP;
     copyOnRead = DFLT_COPY_ON_READ;
-    defaultLockTimeout = DFLT_LOCK_TIMEOUT;
     eagerTtl = DFLT_EAGER_TTL;
     invalidate = DFLT_INVALIDATE;
     maxConcurrentAsyncOperations = DFLT_MAX_CONCURRENT_ASYNC_OPS;
@@ -82,7 +86,6 @@ public class IgniteCacheOptions {
     this.atomicityMode = options.atomicityMode;
     this.writeSynchronizationMode = options.writeSynchronizationMode;
     this.copyOnRead = options.copyOnRead;
-    this.defaultLockTimeout = options.defaultLockTimeout;
     this.eagerTtl = options.eagerTtl;
     this.encryptionEnabled = options.encryptionEnabled;
     this.groupName = options.groupName;
@@ -95,6 +98,7 @@ public class IgniteCacheOptions {
     this.rebalanceDelay = options.rebalanceDelay;
     this.maxQueryInteratorsCount = options.maxQueryInteratorsCount;
     this.eventsDisabled = options.eventsDisabled;
+    this.expiryPolicy = options.expiryPolicy;
   }
 
   /**
@@ -252,27 +256,6 @@ public class IgniteCacheOptions {
    */
   public IgniteCacheOptions setCopyOnRead(boolean copyOnRead) {
     this.copyOnRead = copyOnRead;
-    return this;
-  }
-
-  /**
-   * Gets default lock acquisition timeout. Default value is {@code 0} and
-   * means that lock acquisition will never timeout.
-   *
-   * @return Default lock timeout.
-   */
-  public long getDefaultLockTimeout() {
-    return defaultLockTimeout;
-  }
-
-  /**
-   * Sets default lock timeout in milliseconds.
-   *
-   * @param defaultLockTimeout Default lock timeout.
-   * @return reference to this, for fluency
-   */
-  public IgniteCacheOptions setDefaultLockTimeout(long defaultLockTimeout) {
-    this.defaultLockTimeout = defaultLockTimeout;
     return this;
   }
 
@@ -554,11 +537,33 @@ public class IgniteCacheOptions {
   /**
    * Sets events disabled flag.
    *
-   * @param evtsDisabled Events disabled flag.
+   * @param eventsDisabled Events disabled flag.
    * @return reference to this, for fluency
    */
   public IgniteCacheOptions setEventsDisabled(boolean eventsDisabled) {
     this.eventsDisabled = eventsDisabled;
+    return this;
+  }
+
+  /**
+   * Gets cache expiry policy object.
+   *
+   * @return Json representation of expiry policy.
+   */
+  public JsonObject getExpiryPolicy() {
+    return expiryPolicy;
+  }
+
+  /**
+   * Sets cache expiry policy object.
+   * Requires a duration in milliseconds and an optional type which defaults to "created"
+   * Valid type values are: accessed, modified, touched and created
+   *
+   * @param expiryPolicy Json representation of expiry policys.
+   * @return reference to this, for fluency
+   */
+  public IgniteCacheOptions setExpiryPolicy(JsonObject expiryPolicy) {
+    this.expiryPolicy = expiryPolicy;
     return this;
   }
 
@@ -579,7 +584,7 @@ public class IgniteCacheOptions {
    * @return the CacheConfiguration
    */
   public CacheConfiguration toConfig() {
-    return new CacheConfiguration<>()
+    CacheConfiguration cfg = new CacheConfiguration<>()
       .setName(name)
       .setCacheMode(cacheMode)
       .setBackups(backups)
@@ -587,7 +592,6 @@ public class IgniteCacheOptions {
       .setAtomicityMode(atomicityMode)
       .setWriteSynchronizationMode(writeSynchronizationMode)
       .setCopyOnRead(copyOnRead)
-      .setDefaultLockTimeout(defaultLockTimeout)
       .setEagerTtl(eagerTtl)
       .setEncryptionEnabled(encryptionEnabled)
       .setGroupName(groupName)
@@ -600,5 +604,25 @@ public class IgniteCacheOptions {
       .setRebalanceDelay(rebalanceDelay)
       .setMaxQueryIteratorsCount(maxQueryInteratorsCount)
       .setEventsDisabled(eventsDisabled);
+    if(expiryPolicy != null) {
+      Duration duration = new Duration(TimeUnit.MILLISECONDS, expiryPolicy.getLong("duration"));
+      Factory<ExpiryPolicy> factory;
+      switch (expiryPolicy.getString("type", "created")) {
+        case "accessed":
+          factory = AccessedExpiryPolicy.factoryOf(duration);
+          break;
+        case "modified":
+          factory = ModifiedExpiryPolicy.factoryOf(duration);
+          break;
+        case "touched":
+          factory = TouchedExpiryPolicy.factoryOf(duration);
+          break;
+        case "created":
+        default:
+          factory = CreatedExpiryPolicy.factoryOf(duration);
+      }
+      cfg.setExpiryPolicyFactory(factory);
+    }
+    return cfg;
   }
 }

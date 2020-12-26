@@ -98,7 +98,6 @@ public class IgniteOptionsTest {
     assertEquals(options.getCacheConfiguration().get(0).getRebalanceOrder(), config.getCacheConfiguration()[0].getRebalanceOrder());
     assertEquals(options.getCacheConfiguration().get(0).getWriteSynchronizationMode(), config.getCacheConfiguration()[0].getWriteSynchronizationMode().name());
     assertEquals(options.getCacheConfiguration().get(0).getBackups(), config.getCacheConfiguration()[0].getBackups());
-    assertEquals(options.getCacheConfiguration().get(0).getDefaultLockTimeout(), config.getCacheConfiguration()[0].getDefaultLockTimeout());
     assertEquals(options.getCacheConfiguration().get(0).getMaxConcurrentAsyncOperations(), config.getCacheConfiguration()[0].getMaxConcurrentAsyncOperations());
     assertEquals(options.getCacheConfiguration().get(0).getMaxQueryInteratorsCount(), config.getCacheConfiguration()[0].getMaxQueryIteratorsCount());
     assertEquals(options.getCacheConfiguration().get(0).isEagerTtl(), config.getCacheConfiguration()[0].isEagerTtl());
@@ -107,6 +106,7 @@ public class IgniteOptionsTest {
     assertEquals(options.getCacheConfiguration().get(0).isInvalidate(), config.getCacheConfiguration()[0].isInvalidate());
     assertEquals(options.getCacheConfiguration().get(0).isOnheapCacheEnabled(), config.getCacheConfiguration()[0].isOnheapCacheEnabled());
     assertEquals(options.getCacheConfiguration().get(0).isReadFromBackup(), config.getCacheConfiguration()[0].isReadFromBackup());
+    assertNotNull(config.getCacheConfiguration()[0].getExpiryPolicyFactory());
   }
 
   private IgniteOptions createIgniteOptions() {
@@ -139,7 +139,6 @@ public class IgniteOptionsTest {
         .setBackups(1)
         .setCacheMode("LOCAL")
         .setCopyOnRead(false)
-        .setDefaultLockTimeout(1000L)
         .setEagerTtl(false)
         .setEventsDisabled(true)
         .setGroupName("testGroup")
@@ -152,7 +151,11 @@ public class IgniteOptionsTest {
         .setRebalanceDelay(100L)
         .setRebalanceMode("SYNC")
         .setRebalanceOrder(1)
-        .setWriteSynchronizationMode("FULL_SYNC")));
+        .setWriteSynchronizationMode("FULL_SYNC")
+        .setExpiryPolicy(new JsonObject()
+          .put("type", "created")
+          .put("duration", 60000L)
+        )));
   }
 
   @Test
@@ -210,7 +213,6 @@ public class IgniteOptionsTest {
     assertEquals(options.getCacheConfiguration().get(0).getRebalanceOrder(), json.getJsonArray("cacheConfiguration").getJsonObject(0).getInteger("rebalanceOrder").intValue());
     assertEquals(options.getCacheConfiguration().get(0).getWriteSynchronizationMode(), json.getJsonArray("cacheConfiguration").getJsonObject(0).getString("writeSynchronizationMode"));
     assertEquals(options.getCacheConfiguration().get(0).getBackups(), json.getJsonArray("cacheConfiguration").getJsonObject(0).getInteger("backups").intValue());
-    assertEquals(options.getCacheConfiguration().get(0).getDefaultLockTimeout(), json.getJsonArray("cacheConfiguration").getJsonObject(0).getLong("defaultLockTimeout").longValue());
     assertEquals(options.getCacheConfiguration().get(0).getMaxConcurrentAsyncOperations(), json.getJsonArray("cacheConfiguration").getJsonObject(0).getInteger("maxConcurrentAsyncOperations").intValue());
     assertEquals(options.getCacheConfiguration().get(0).getMaxQueryInteratorsCount(), json.getJsonArray("cacheConfiguration").getJsonObject(0).getInteger("maxQueryInteratorsCount").intValue());
     assertEquals(options.getCacheConfiguration().get(0).isEagerTtl(), json.getJsonArray("cacheConfiguration").getJsonObject(0).getBoolean("eagerTtl"));
@@ -219,6 +221,8 @@ public class IgniteOptionsTest {
     assertEquals(options.getCacheConfiguration().get(0).isInvalidate(), json.getJsonArray("cacheConfiguration").getJsonObject(0).getBoolean("invalidate"));
     assertEquals(options.getCacheConfiguration().get(0).isOnheapCacheEnabled(), json.getJsonArray("cacheConfiguration").getJsonObject(0).getBoolean("onheapCacheEnabled"));
     assertEquals(options.getCacheConfiguration().get(0).isReadFromBackup(), json.getJsonArray("cacheConfiguration").getJsonObject(0).getBoolean("readFromBackup"));
+    assertEquals(options.getCacheConfiguration().get(0).getExpiryPolicy().getString("type"), json.getJsonArray("cacheConfiguration").getJsonObject(0).getJsonObject("expiryPolicy").getString("type"));
+    assertEquals(options.getCacheConfiguration().get(0).getExpiryPolicy().getString("duration"), json.getJsonArray("cacheConfiguration").getJsonObject(0).getJsonObject("expiryPolicy").getString("duration"));
   }
 
   @Test
@@ -265,7 +269,11 @@ public class IgniteOptionsTest {
     "    \"rebalanceDelay\": 100,\n" +
     "    \"rebalanceMode\": \"SYNC\",\n" +
     "    \"rebalanceOrder\": 1,\n" +
-    "    \"writeSynchronizationMode\": \"FULL_SYNC\"\n" +
+    "    \"writeSynchronizationMode\": \"FULL_SYNC\",\n" +
+    "    \"expiryPolicy\": {\n" +
+    "      \"type\": \"created\",\n" +
+    "      \"duration\": 60000\n" +
+    "    }\n" +
     "  }],\n" +
     "  \"sslContextFactory\": {\n" +
     "    \"keyAlgorithm\": \"SunX509\",\n" +

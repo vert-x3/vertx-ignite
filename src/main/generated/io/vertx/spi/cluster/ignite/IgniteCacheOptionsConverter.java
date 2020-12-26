@@ -36,11 +36,6 @@ public class IgniteCacheOptionsConverter {
             obj.setCopyOnRead((Boolean)member.getValue());
           }
           break;
-        case "defaultLockTimeout":
-          if (member.getValue() instanceof Number) {
-            obj.setDefaultLockTimeout(((Number)member.getValue()).longValue());
-          }
-          break;
         case "eagerTtl":
           if (member.getValue() instanceof Boolean) {
             obj.setEagerTtl((Boolean)member.getValue());
@@ -54,6 +49,11 @@ public class IgniteCacheOptionsConverter {
         case "eventsDisabled":
           if (member.getValue() instanceof Boolean) {
             obj.setEventsDisabled((Boolean)member.getValue());
+          }
+          break;
+        case "expiryPolicy":
+          if (member.getValue() instanceof JsonObject) {
+            obj.setExpiryPolicy(((JsonObject)member.getValue()).copy());
           }
           break;
         case "groupName":
@@ -133,10 +133,12 @@ public class IgniteCacheOptionsConverter {
       json.put("cacheMode", obj.getCacheMode());
     }
     json.put("copyOnRead", obj.isCopyOnRead());
-    json.put("defaultLockTimeout", obj.getDefaultLockTimeout());
     json.put("eagerTtl", obj.isEagerTtl());
     json.put("encryptionEnabled", obj.isEncryptionEnabled());
     json.put("eventsDisabled", obj.isEventsDisabled());
+    if (obj.getExpiryPolicy() != null) {
+      json.put("expiryPolicy", obj.getExpiryPolicy());
+    }
     if (obj.getGroupName() != null) {
       json.put("groupName", obj.getGroupName());
     }

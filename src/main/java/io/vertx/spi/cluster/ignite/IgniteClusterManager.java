@@ -34,13 +34,14 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.failure.StopNodeFailureHandler;
+import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.segmentation.SegmentationPolicy;
 
 import javax.cache.CacheException;
-import javax.cache.expiry.Duration;
+import javax.cache.configuration.Factory;
 import javax.cache.expiry.ExpiryPolicy;
-import java.io.*;
+import javax.cache.expiry.TouchedExpiryPolicy;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.Executor;
@@ -77,7 +78,7 @@ public class IgniteClusterManager implements ClusterManager {
   private static final String LOCK_SEMAPHORE_PREFIX = "__vertx.";
 
   // Workaround for https://github.com/vert-x3/vertx-ignite/issues/63
-  private static final ExpiryPolicy DEFAULT_EXPIRY_POLICY = new ClearExpiryPolicy();
+  private static final Factory<ExpiryPolicy> DEFAULT_EXPIRY_POLICY_FACTORY = TouchedExpiryPolicy.factoryOf(ETERNAL);
 
   private static final int[] IGNITE_EVENTS = new int[]{EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED, EVT_NODE_SEGMENTED};
 
@@ -433,7 +434,10 @@ public class IgniteClusterManager implements ClusterManager {
 
   private <K, V> IgniteCache<K, V> getCache(String name) {
     IgniteCache<K, V> cache = ignite.getOrCreateCache(name);
-    return cache.withExpiryPolicy(DEFAULT_EXPIRY_POLICY);
+    if(((IgniteCacheProxy) cache).context().expiry() == null) {
+      return cache.withExpiryPolicy(DEFAULT_EXPIRY_POLICY_FACTORY.create());
+    }
+    return cache;
   }
 
   private static String nodeId(ClusterNode node) {
@@ -540,23 +544,6 @@ public class IgniteClusterManager implements ClusterManager {
     public void compareAndSet(long expected, long value, Handler<AsyncResult<Boolean>> handler) {
       Objects.requireNonNull(handler, "handler");
       compareAndSet(expected, value).onComplete(handler);
-    }
-  }
-
-  private static class ClearExpiryPolicy implements ExpiryPolicy, Serializable {
-    @Override
-    public Duration getExpiryForCreation() {
-      return ETERNAL;
-    }
-
-    @Override
-    public Duration getExpiryForAccess() {
-      return ETERNAL;
-    }
-
-    @Override
-    public Duration getExpiryForUpdate() {
-      return ETERNAL;
     }
   }
 }
