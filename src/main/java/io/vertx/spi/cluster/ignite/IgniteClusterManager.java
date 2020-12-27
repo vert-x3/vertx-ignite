@@ -41,7 +41,7 @@ import org.apache.ignite.plugin.segmentation.SegmentationPolicy;
 import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
 import javax.cache.expiry.ExpiryPolicy;
-import javax.cache.expiry.TouchedExpiryPolicy;
+import javax.cache.expiry.ModifiedExpiryPolicy;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.Executor;
@@ -77,8 +77,7 @@ public class IgniteClusterManager implements ClusterManager {
 
   private static final String LOCK_SEMAPHORE_PREFIX = "__vertx.";
 
-  // Workaround for https://github.com/vert-x3/vertx-ignite/issues/63
-  private static final Factory<ExpiryPolicy> DEFAULT_EXPIRY_POLICY_FACTORY = TouchedExpiryPolicy.factoryOf(ETERNAL);
+  private static final Factory<ExpiryPolicy> DEFAULT_EXPIRY_POLICY_FACTORY = ModifiedExpiryPolicy.factoryOf(ETERNAL);
 
   private static final int[] IGNITE_EVENTS = new int[]{EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED, EVT_NODE_SEGMENTED};
 
@@ -434,7 +433,7 @@ public class IgniteClusterManager implements ClusterManager {
 
   private <K, V> IgniteCache<K, V> getCache(String name) {
     IgniteCache<K, V> cache = ignite.getOrCreateCache(name);
-    if(((IgniteCacheProxy) cache).context().expiry() == null) {
+    if (((IgniteCacheProxy) cache).context().expiry() == null) {
       return cache.withExpiryPolicy(DEFAULT_EXPIRY_POLICY_FACTORY.create());
     }
     return cache;
