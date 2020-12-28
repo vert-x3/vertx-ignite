@@ -18,7 +18,6 @@ package io.vertx;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
-import io.vertx.core.shareddata.IgniteClusteredSharedCounterTest;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.binary.BinaryEnumCache;
@@ -42,12 +41,13 @@ import static org.junit.Assert.assertTrue;
  * @author Lukas Prettenthaler
  */
 public class Lifecycle {
-  private static final Logger log = LoggerFactory.getLogger(IgniteClusteredSharedCounterTest.class);
+  private static final Logger log = LoggerFactory.getLogger(Lifecycle.class);
 
   public static void closeClustered(List<Vertx> clustered) throws Exception {
     CountDownLatch latch = new CountDownLatch(clustered.size());
-    for (Vertx clusteredVertx : clustered) {
-      clusteredVertx.close(ar -> {
+    for (Vertx vertx : clustered) {
+      Thread.sleep(500L);
+      vertx.close(ar -> {
         if (ar.failed()) {
           log.error("Failed to shutdown vert.x", ar.cause());
         }
