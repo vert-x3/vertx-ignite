@@ -22,6 +22,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -32,6 +33,14 @@ public class IgniteFaultToleranceTest extends FaultToleranceTest {
   @Override
   protected ClusterManager getClusterManager() {
     return new IgniteClusterManager();
+  }
+
+  @Override
+  protected List<String> getExternalNodeSystemProperties() {
+    return Arrays.asList(
+      "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
+      "-Djava.net.preferIPv4Stack=true"
+    );
   }
 
   @Override
