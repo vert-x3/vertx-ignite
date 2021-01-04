@@ -27,7 +27,7 @@ import java.util.Objects;
  * @author Thomas Segismont
  * @author Lukas Prettenthaler
  */
-public class IgniteRegistrationInfo implements Binarylizable, Comparable<IgniteRegistrationInfo> {
+public class IgniteRegistrationInfo implements Binarylizable {
   private String address;
   private RegistrationInfo registrationInfo;
 
@@ -77,10 +77,5 @@ public class IgniteRegistrationInfo implements Binarylizable, Comparable<IgniteR
     int result = address.hashCode();
     result = 31 * result + registrationInfo.hashCode();
     return result;
-  }
-
-  @Override
-  public int compareTo(IgniteRegistrationInfo other) {
-    return Integer.compare(hashCode(), other.hashCode());
   }
 }
