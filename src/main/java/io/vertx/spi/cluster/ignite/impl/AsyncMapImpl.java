@@ -30,8 +30,8 @@ import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.lang.IgniteFuture;
 
 import javax.cache.Cache;
-import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
+import javax.cache.expiry.ModifiedExpiryPolicy;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -148,7 +148,7 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
     ContextInternal ctx = vertx.getOrCreateContext();
     Promise<T> promise = ctx.promise();
     IgniteCache<K, V> cache0 = ttl > 0 ?
-      cache.withExpiryPolicy(new CreatedExpiryPolicy(new Duration(TimeUnit.MILLISECONDS, ttl))) : cache;
+      cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(TimeUnit.MILLISECONDS, ttl))) : cache;
 
     IgniteFuture<T> future = cacheOp.apply(cache0);
     future.listen(fut -> {
