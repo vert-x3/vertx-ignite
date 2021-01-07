@@ -107,7 +107,7 @@ public class IgniteClusterManager implements ClusterManager {
    */
   @SuppressWarnings("unused")
   public IgniteClusterManager() {
-    System.setProperty("IGNITE_NO_SHUTDOWN_HOOK", "true");
+    setIgniteProperties();
     if (SPRING.inClassPath()) {
       try {
         cfg = ConfigHelper.lookupXmlConfiguration(this.getClass(), XML_CONFIG_FILE);
@@ -132,7 +132,7 @@ public class IgniteClusterManager implements ClusterManager {
    */
   @SuppressWarnings("unused")
   public IgniteClusterManager(IgniteConfiguration cfg) {
-    System.setProperty("IGNITE_NO_SHUTDOWN_HOOK", "true");
+    setIgniteProperties();
     this.cfg = cfg;
     setNodeId(cfg);
   }
@@ -145,7 +145,7 @@ public class IgniteClusterManager implements ClusterManager {
    */
   @SuppressWarnings("unused")
   public IgniteClusterManager(URL configFile) {
-    System.setProperty("IGNITE_NO_SHUTDOWN_HOOK", "true");
+    setIgniteProperties();
     this.cfg = ConfigHelper.loadConfiguration(configFile);
     setNodeId(cfg);
   }
@@ -158,7 +158,7 @@ public class IgniteClusterManager implements ClusterManager {
    */
   @SuppressWarnings("unused")
   public IgniteClusterManager(JsonObject jsonConfig) {
-    System.setProperty("IGNITE_NO_SHUTDOWN_HOOK", "true");
+    setIgniteProperties();
     IgniteOptions options = new IgniteOptions(jsonConfig);
     this.shutdownOnSegmentation = options.isShutdownOnSegmentation();
     this.cfg = options.toConfig()
@@ -441,6 +441,11 @@ public class IgniteClusterManager implements ClusterManager {
 
   private static String nodeId(ClusterNode node) {
     return node.id().toString();
+  }
+
+  private static void setIgniteProperties() {
+    System.setProperty("IGNITE_NO_SHUTDOWN_HOOK", "true");
+    System.setProperty("IGNITE_UPDATE_NOTIFIER", "false");
   }
 
   private static class LockImpl implements Lock {
