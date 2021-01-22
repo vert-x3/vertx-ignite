@@ -19,12 +19,15 @@ import io.vertx.codegen.annotations.DataObject;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 
 import java.util.*;
 
+import static org.apache.ignite.configuration.DataStorageConfiguration.*;
 import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_METRICS_LOG_FREQ;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.*;
 
@@ -46,6 +49,8 @@ public class IgniteOptions {
   private List<IgniteCacheOptions> cacheConfiguration;
   private IgniteSslOptions sslOptions;
   private boolean shutdownOnSegmentation;
+  private long defaultRegionInitialSize;
+  private long defaultRegionMaxSize;
 
   /**
    * Default constructor
@@ -63,6 +68,8 @@ public class IgniteOptions {
     cacheConfiguration = new ArrayList<>();
     sslOptions = new IgniteSslOptions();
     shutdownOnSegmentation = true;
+    defaultRegionInitialSize = DFLT_DATA_REGION_INITIAL_SIZE;
+    defaultRegionMaxSize = DFLT_DATA_REGION_MAX_SIZE;
   }
 
   /**
@@ -84,6 +91,8 @@ public class IgniteOptions {
     this.cacheConfiguration = options.cacheConfiguration;
     this.sslOptions = options.sslOptions;
     this.shutdownOnSegmentation = options.shutdownOnSegmentation;
+    this.defaultRegionInitialSize = options.defaultRegionInitialSize;
+    this.defaultRegionMaxSize = options.defaultRegionMaxSize;
   }
 
   /**
@@ -359,6 +368,48 @@ public class IgniteOptions {
   }
 
   /**
+   * Get default data region start size.
+   * Default to 256 MB
+   *
+   * @return size in bytes.
+   */
+  public long getDefaultRegionInitialSize() {
+    return defaultRegionInitialSize;
+  }
+
+  /**
+   * Sets default data region start size.
+   *
+   * @param defaultRegionInitialSize size in bytes.
+   * @return reference to this, for fluency
+   */
+  public IgniteOptions setDefaultRegionInitialSize(long defaultRegionInitialSize) {
+    this.defaultRegionInitialSize = defaultRegionInitialSize;
+    return this;
+  }
+
+  /**
+   * Get default data region maximum size.
+   * Default to 20% of physical memory available
+   *
+   * @return size in bytes.
+   */
+  public long getDefaultRegionMaxSize() {
+    return defaultRegionMaxSize;
+  }
+
+  /**
+   * Sets default data region maximum size.
+   *
+   * @param defaultRegionMaxSize size in bytes.
+   * @return reference to this, for fluency
+   */
+  public IgniteOptions setDefaultRegionMaxSize(long defaultRegionMaxSize) {
+    this.defaultRegionMaxSize = defaultRegionMaxSize;
+    return this;
+  }
+
+  /**
    * Convert to JSON
    *
    * @return the JSON
@@ -394,6 +445,14 @@ public class IgniteOptions {
       .map(IgniteCacheOptions::toConfig)
       .toArray(CacheConfiguration[]::new));
     configuration.setSslContextFactory(sslOptions.toConfig());
+
+    DataStorageConfiguration storageCfg = new DataStorageConfiguration();
+    DataRegionConfiguration defaultRegion = new DataRegionConfiguration();
+    defaultRegion.setName(DFLT_DATA_REG_DEFAULT_NAME);
+    defaultRegion.setInitialSize(defaultRegionInitialSize);
+    defaultRegion.setMaxSize(Math.max(defaultRegionMaxSize, defaultRegionInitialSize));
+    storageCfg.setDefaultDataRegionConfiguration(defaultRegion);
+    configuration.setDataStorageConfiguration(storageCfg);
     return configuration;
   }
 

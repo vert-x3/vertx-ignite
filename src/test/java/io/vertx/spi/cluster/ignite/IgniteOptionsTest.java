@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static org.apache.ignite.configuration.DataStorageConfiguration.*;
 import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_METRICS_LOG_FREQ;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.*;
 import static org.apache.ignite.ssl.SslContextFactory.*;
@@ -42,6 +43,8 @@ public class IgniteOptionsTest {
     assertNull(options.getSslContextFactory().getTrustStoreFilePath());
     assertFalse(options.getSslContextFactory().isTrustAll());
     assertTrue(options.isShutdownOnSegmentation());
+    assertEquals(DFLT_DATA_REGION_INITIAL_SIZE, options.getDefaultRegionInitialSize());
+    assertEquals(DFLT_DATA_REGION_MAX_SIZE, options.getDefaultRegionMaxSize());
   }
 
   @Test
@@ -67,6 +70,8 @@ public class IgniteOptionsTest {
     assertNull(options.getSslContextFactory().getTrustStoreFilePath());
     assertFalse(options.getSslContextFactory().isTrustAll());
     assertTrue(options.isShutdownOnSegmentation());
+    assertEquals(DFLT_DATA_REGION_INITIAL_SIZE, options.getDefaultRegionInitialSize());
+    assertEquals(DFLT_DATA_REGION_MAX_SIZE, options.getDefaultRegionMaxSize());
   }
 
   private void checkConfig(IgniteOptions options, IgniteConfiguration config) {
@@ -107,6 +112,8 @@ public class IgniteOptionsTest {
     assertEquals(options.getCacheConfiguration().get(0).isOnheapCacheEnabled(), config.getCacheConfiguration()[0].isOnheapCacheEnabled());
     assertEquals(options.getCacheConfiguration().get(0).isReadFromBackup(), config.getCacheConfiguration()[0].isReadFromBackup());
     assertNotNull(config.getCacheConfiguration()[0].getExpiryPolicyFactory());
+    assertEquals(options.getDefaultRegionInitialSize(), config.getDataStorageConfiguration().getDefaultDataRegionConfiguration().getInitialSize());
+    assertEquals(options.getDefaultRegionMaxSize(), config.getDataStorageConfiguration().getDefaultDataRegionConfiguration().getMaxSize());
   }
 
   private IgniteOptions createIgniteOptions() {
@@ -155,7 +162,9 @@ public class IgniteOptionsTest {
         .setExpiryPolicy(new JsonObject()
           .put("type", "created")
           .put("duration", 60000L)
-        )));
+        )))
+      .setDefaultRegionInitialSize(40L * 1024 * 1024)
+      .setDefaultRegionMaxSize(100L * 1024 * 1024);
   }
 
   @Test
@@ -223,6 +232,8 @@ public class IgniteOptionsTest {
     assertEquals(options.getCacheConfiguration().get(0).isReadFromBackup(), json.getJsonArray("cacheConfiguration").getJsonObject(0).getBoolean("readFromBackup"));
     assertEquals(options.getCacheConfiguration().get(0).getExpiryPolicy().getString("type"), json.getJsonArray("cacheConfiguration").getJsonObject(0).getJsonObject("expiryPolicy").getString("type"));
     assertEquals(options.getCacheConfiguration().get(0).getExpiryPolicy().getString("duration"), json.getJsonArray("cacheConfiguration").getJsonObject(0).getJsonObject("expiryPolicy").getString("duration"));
+    assertEquals(options.getDefaultRegionInitialSize(), json.getLong("defaultRegionInitialSize").longValue());
+    assertEquals(options.getDefaultRegionMaxSize(), json.getLong("defaultRegionMaxSize").longValue());
   }
 
   @Test
@@ -285,7 +296,9 @@ public class IgniteOptionsTest {
     "    \"trustStoreFilePath\": \"src/test/resources/server.jks\",\n" +
     "    \"trustStorePassword\": \"123456\",\n" +
     "    \"trustStoreType\": \"JKS\"\n" +
-    "  }\n" +
+    "  },\n" +
+    "  \"defaultRegionInitialSize\": 41943040,\n" +
+    "  \"defaultRegionMaxSize\": 104857600\n" +
     "}";
 
   @Test
