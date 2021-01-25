@@ -36,6 +36,16 @@ public class IgniteOptionsConverter {
             obj.setConnectionsPerNode(((Number)member.getValue()).intValue());
           }
           break;
+        case "defaultRegionInitialSize":
+          if (member.getValue() instanceof Number) {
+            obj.setDefaultRegionInitialSize(((Number)member.getValue()).longValue());
+          }
+          break;
+        case "defaultRegionMaxSize":
+          if (member.getValue() instanceof Number) {
+            obj.setDefaultRegionMaxSize(((Number)member.getValue()).longValue());
+          }
+          break;
         case "discoverySpi":
           if (member.getValue() instanceof JsonObject) {
             obj.setDiscoverySpi(new io.vertx.spi.cluster.ignite.IgniteDiscoveryOptions((io.vertx.core.json.JsonObject)member.getValue()));
@@ -107,6 +117,8 @@ public class IgniteOptionsConverter {
     }
     json.put("connectTimeout", obj.getConnectTimeout());
     json.put("connectionsPerNode", obj.getConnectionsPerNode());
+    json.put("defaultRegionInitialSize", obj.getDefaultRegionInitialSize());
+    json.put("defaultRegionMaxSize", obj.getDefaultRegionMaxSize());
     if (obj.getDiscoverySpi() != null) {
       json.put("discoverySpi", obj.getDiscoverySpi().toJson());
     }
