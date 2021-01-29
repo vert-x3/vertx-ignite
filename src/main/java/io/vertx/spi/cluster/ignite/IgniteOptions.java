@@ -17,6 +17,7 @@ package io.vertx.spi.cluster.ignite;
 
 import io.vertx.codegen.annotations.DataObject;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -66,7 +67,6 @@ public class IgniteOptions {
     metricsLogFrequency = DFLT_METRICS_LOG_FREQ;
     discoveryOptions = new IgniteDiscoveryOptions();
     cacheConfiguration = new ArrayList<>();
-    sslOptions = new IgniteSslOptions();
     shutdownOnSegmentation = true;
     defaultRegionInitialSize = DFLT_DATA_REGION_INITIAL_SIZE;
     defaultRegionMaxSize = DFLT_DATA_REGION_MAX_SIZE;
@@ -425,7 +425,7 @@ public class IgniteOptions {
    *
    * @return the IgniteConfiguration
    */
-  public IgniteConfiguration toConfig() {
+  public IgniteConfiguration toConfig(Vertx vertx) {
     IgniteConfiguration configuration = new IgniteConfiguration();
     configuration.setLocalHost(localHost);
     configuration.setCommunicationSpi(new TcpCommunicationSpi()
@@ -444,7 +444,9 @@ public class IgniteOptions {
     configuration.setCacheConfiguration(cacheConfiguration.stream()
       .map(IgniteCacheOptions::toConfig)
       .toArray(CacheConfiguration[]::new));
-    configuration.setSslContextFactory(sslOptions.toConfig());
+    if(sslOptions != null) {
+      configuration.setSslContextFactory(sslOptions.toConfig(vertx));
+    }
 
     DataStorageConfiguration storageCfg = new DataStorageConfiguration();
     DataRegionConfiguration defaultRegion = new DataRegionConfiguration();

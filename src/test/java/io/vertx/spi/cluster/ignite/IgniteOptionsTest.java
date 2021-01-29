@@ -1,5 +1,6 @@
 package io.vertx.spi.cluster.ignite;
 
+import io.vertx.core.Vertx;
 import io.vertx.core.VertxException;
 import io.vertx.core.json.JsonObject;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -15,8 +16,8 @@ import java.util.stream.Collectors;
 import static org.apache.ignite.configuration.DataStorageConfiguration.*;
 import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_METRICS_LOG_FREQ;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.*;
-import static org.apache.ignite.ssl.SslContextFactory.*;
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class IgniteOptionsTest {
 
@@ -35,13 +36,7 @@ public class IgniteOptionsTest {
     assertEquals("TcpDiscoveryMulticastIpFinder", options.getDiscoverySpi().getType());
     assertEquals(0, options.getDiscoverySpi().getProperties().size());
     assertEquals(0, options.getCacheConfiguration().size());
-    assertEquals(DFLT_SSL_PROTOCOL, options.getSslContextFactory().getProtocol());
-    assertEquals(DFLT_KEY_ALGORITHM, options.getSslContextFactory().getKeyAlgorithm());
-    assertEquals(DFLT_STORE_TYPE, options.getSslContextFactory().getKeyStoreType());
-    assertEquals(DFLT_STORE_TYPE, options.getSslContextFactory().getTrustStoreType());
-    assertNull(options.getSslContextFactory().getKeyStoreFilePath());
-    assertNull(options.getSslContextFactory().getTrustStoreFilePath());
-    assertFalse(options.getSslContextFactory().isTrustAll());
+    assertNull(options.getSslContextFactory());
     assertTrue(options.isShutdownOnSegmentation());
     assertEquals(DFLT_DATA_REGION_INITIAL_SIZE, options.getDefaultRegionInitialSize());
     assertEquals(DFLT_DATA_REGION_MAX_SIZE, options.getDefaultRegionMaxSize());
@@ -62,13 +57,7 @@ public class IgniteOptionsTest {
     assertEquals("TcpDiscoveryMulticastIpFinder", options.getDiscoverySpi().getType());
     assertEquals(0, options.getDiscoverySpi().getProperties().size());
     assertEquals(0, options.getCacheConfiguration().size());
-    assertEquals(DFLT_SSL_PROTOCOL, options.getSslContextFactory().getProtocol());
-    assertEquals(DFLT_KEY_ALGORITHM, options.getSslContextFactory().getKeyAlgorithm());
-    assertEquals(DFLT_STORE_TYPE, options.getSslContextFactory().getKeyStoreType());
-    assertEquals(DFLT_STORE_TYPE, options.getSslContextFactory().getTrustStoreType());
-    assertNull(options.getSslContextFactory().getKeyStoreFilePath());
-    assertNull(options.getSslContextFactory().getTrustStoreFilePath());
-    assertFalse(options.getSslContextFactory().isTrustAll());
+    assertNull(options.getSslContextFactory());
     assertTrue(options.isShutdownOnSegmentation());
     assertEquals(DFLT_DATA_REGION_INITIAL_SIZE, options.getDefaultRegionInitialSize());
     assertEquals(DFLT_DATA_REGION_MAX_SIZE, options.getDefaultRegionMaxSize());
@@ -170,7 +159,7 @@ public class IgniteOptionsTest {
   @Test
   public void toConfig() {
     IgniteOptions options = createIgniteOptions();
-    IgniteConfiguration config = options.toConfig();
+    IgniteConfiguration config = options.toConfig(Vertx.vertx());
     checkConfig(options, config);
   }
 
@@ -179,14 +168,14 @@ public class IgniteOptionsTest {
     IgniteOptions options = new IgniteOptions()
       .setDiscoverySpi(new IgniteDiscoveryOptions()
         .setType("NotExistingSpi"));
-    options.toConfig();
+    options.toConfig(Vertx.vertx());
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void unsupportedEventType() {
     IgniteOptions options = new IgniteOptions()
       .setIncludeEventTypes(Arrays.asList("EVT_NOT_EXISTING1", "EVT_NOT_EXISTING2"));
-    options.toConfig();
+    options.toConfig(Vertx.vertx());
   }
 
   private void checkJson(IgniteOptions options, JsonObject json) {
@@ -313,5 +302,78 @@ public class IgniteOptionsTest {
     IgniteOptions options = createIgniteOptions();
     IgniteOptions copy = new IgniteOptions(options);
     assertEquals(options.getLocalHost(), copy.getLocalHost());
+  }
+
+  private static final String IGNITE_JSON_PEM_CERT = "{\n" +
+    "  \"sslContextFactory\": {\n" +
+    "    \"protocol\": \"TLSv1.2\",\n" +
+    "    \"pemKeyCertOptions\": {\n" +
+    "      \"keyPath\": \"src/test/resources/server-key.pem\",\n" +
+    "      \"certPath\": \"src/test/resources/server-cert.pem\"\n" +
+    "    },\n" +
+    "    \"pemTrustOptions\": {\n" +
+    "      \"certPaths\": [\"src/test/resources/ca.pem\"]\n" +
+    "    }\n" +
+    "  }\n" +
+    "}";
+
+  @Test
+  public void testPemKeyCert() {
+    JsonObject json = new JsonObject(IGNITE_JSON_PEM_CERT);
+    IgniteSslOptions options = new IgniteOptions(json).getSslContextFactory();
+    assertEquals(options.getPemKeyCertOptions().getKeyPath(), "src/test/resources/server-key.pem");
+    assertEquals(options.getPemKeyCertOptions().getCertPath(), "src/test/resources/server-cert.pem");
+    assertEquals(options.getPemTrustOptions().getCertPaths().get(0), "src/test/resources/ca.pem");
+    assertEquals(options.toConfig(Vertx.vertx()).create().getProtocol(), "TLSv1.2");
+  }
+
+  private static final String IGNITE_JSON_PFX_CERT = "{\n" +
+    "  \"sslContextFactory\": {\n" +
+    "    \"protocol\": \"TLSv1.2\",\n" +
+    "    \"pfxKeyCertOptions\": {\n" +
+    "      \"path\": \"src/test/resources/server-keystore.p12\",\n" +
+    "      \"password\": \"wibble\"\n" +
+    "    },\n" +
+    "    \"pfxTrustOptions\": {\n" +
+    "      \"path\": \"src/test/resources/ca.p12\",\n" +
+    "      \"password\": \"wibble\"\n" +
+    "    }\n" +
+    "  }\n" +
+    "}";
+
+  @Test
+  public void testPfxKeyCert() {
+    JsonObject json = new JsonObject(IGNITE_JSON_PFX_CERT);
+    IgniteSslOptions options = new IgniteOptions(json).getSslContextFactory();
+    assertEquals(options.getPfxKeyCertOptions().getPath(), "src/test/resources/server-keystore.p12");
+    assertEquals(options.getPfxKeyCertOptions().getPassword(), "wibble");
+    assertEquals(options.getPfxTrustOptions().getPath(), "src/test/resources/ca.p12");
+    assertEquals(options.getPfxTrustOptions().getPassword(), "wibble");
+    assertEquals(options.toConfig(Vertx.vertx()).create().getProtocol(), "TLSv1.2");
+  }
+
+  private static final String IGNITE_JSON_JKS_CERT = "{\n" +
+    "  \"sslContextFactory\": {\n" +
+    "    \"protocol\": \"TLSv1.2\",\n" +
+    "    \"jksKeyCertOptions\": {\n" +
+    "      \"path\": \"src/test/resources/server.jks\",\n" +
+    "      \"password\": \"123456\"\n" +
+    "    },\n" +
+    "    \"jksTrustOptions\": {\n" +
+    "      \"path\": \"src/test/resources/server.jks\",\n" +
+    "      \"password\": \"123456\"\n" +
+    "    }\n" +
+    "  }\n" +
+    "}";
+
+  @Test
+  public void testJksKeyCert() {
+    JsonObject json = new JsonObject(IGNITE_JSON_JKS_CERT);
+    IgniteSslOptions options = new IgniteOptions(json).getSslContextFactory();
+    assertEquals(options.getJksKeyCertOptions().getPath(), "src/test/resources/server.jks");
+    assertEquals(options.getJksKeyCertOptions().getPassword(), "123456");
+    assertEquals(options.getJksTrustOptions().getPath(), "src/test/resources/server.jks");
+    assertEquals(options.getJksTrustOptions().getPassword(), "123456");
+    assertEquals(options.toConfig(Vertx.vertx()).create().getProtocol(), "TLSv1.2");
   }
 }

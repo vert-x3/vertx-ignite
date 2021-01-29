@@ -16,6 +16,16 @@ public class IgniteSslOptionsConverter {
   public static void fromJson(Iterable<java.util.Map.Entry<String, Object>> json, IgniteSslOptions obj) {
     for (java.util.Map.Entry<String, Object> member : json) {
       switch (member.getKey()) {
+        case "jksKeyCertOptions":
+          if (member.getValue() instanceof JsonObject) {
+            obj.setJksKeyCertOptions(new io.vertx.core.net.JksOptions((io.vertx.core.json.JsonObject)member.getValue()));
+          }
+          break;
+        case "jksTrustOptions":
+          if (member.getValue() instanceof JsonObject) {
+            obj.setJksTrustOptions(new io.vertx.core.net.JksOptions((io.vertx.core.json.JsonObject)member.getValue()));
+          }
+          break;
         case "keyAlgorithm":
           if (member.getValue() instanceof String) {
             obj.setKeyAlgorithm((String)member.getValue());
@@ -34,6 +44,26 @@ public class IgniteSslOptionsConverter {
         case "keyStoreType":
           if (member.getValue() instanceof String) {
             obj.setKeyStoreType((String)member.getValue());
+          }
+          break;
+        case "pemKeyCertOptions":
+          if (member.getValue() instanceof JsonObject) {
+            obj.setPemKeyCertOptions(new io.vertx.core.net.PemKeyCertOptions((io.vertx.core.json.JsonObject)member.getValue()));
+          }
+          break;
+        case "pemTrustOptions":
+          if (member.getValue() instanceof JsonObject) {
+            obj.setPemTrustOptions(new io.vertx.core.net.PemTrustOptions((io.vertx.core.json.JsonObject)member.getValue()));
+          }
+          break;
+        case "pfxKeyCertOptions":
+          if (member.getValue() instanceof JsonObject) {
+            obj.setPfxKeyCertOptions(new io.vertx.core.net.PfxOptions((io.vertx.core.json.JsonObject)member.getValue()));
+          }
+          break;
+        case "pfxTrustOptions":
+          if (member.getValue() instanceof JsonObject) {
+            obj.setPfxTrustOptions(new io.vertx.core.net.PfxOptions((io.vertx.core.json.JsonObject)member.getValue()));
           }
           break;
         case "protocol":
@@ -70,6 +100,12 @@ public class IgniteSslOptionsConverter {
   }
 
   public static void toJson(IgniteSslOptions obj, java.util.Map<String, Object> json) {
+    if (obj.getJksKeyCertOptions() != null) {
+      json.put("jksKeyCertOptions", obj.getJksKeyCertOptions().toJson());
+    }
+    if (obj.getJksTrustOptions() != null) {
+      json.put("jksTrustOptions", obj.getJksTrustOptions().toJson());
+    }
     if (obj.getKeyAlgorithm() != null) {
       json.put("keyAlgorithm", obj.getKeyAlgorithm());
     }
@@ -81,6 +117,18 @@ public class IgniteSslOptionsConverter {
     }
     if (obj.getKeyStoreType() != null) {
       json.put("keyStoreType", obj.getKeyStoreType());
+    }
+    if (obj.getPemKeyCertOptions() != null) {
+      json.put("pemKeyCertOptions", obj.getPemKeyCertOptions().toJson());
+    }
+    if (obj.getPemTrustOptions() != null) {
+      json.put("pemTrustOptions", obj.getPemTrustOptions().toJson());
+    }
+    if (obj.getPfxKeyCertOptions() != null) {
+      json.put("pfxKeyCertOptions", obj.getPfxKeyCertOptions().toJson());
+    }
+    if (obj.getPfxTrustOptions() != null) {
+      json.put("pfxTrustOptions", obj.getPfxTrustOptions().toJson());
     }
     if (obj.getProtocol() != null) {
       json.put("protocol", obj.getProtocol());
