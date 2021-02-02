@@ -40,8 +40,7 @@ import org.apache.ignite.plugin.segmentation.SegmentationPolicy;
 
 import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
-import javax.cache.expiry.ExpiryPolicy;
-import javax.cache.expiry.ModifiedExpiryPolicy;
+import javax.cache.expiry.*;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.Executor;
@@ -430,7 +429,7 @@ public class IgniteClusterManager implements ClusterManager {
         options = extJsonConfig;
       }
       shutdownOnSegmentation = options.isShutdownOnSegmentation();
-      cfg = options.toConfig(vertx)
+      cfg = ConfigHelper.toIgniteConfig(vertx, options)
         .setGridLogger(new VertxLogger());
     }
 

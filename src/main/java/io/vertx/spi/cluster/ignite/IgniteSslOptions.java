@@ -16,23 +16,8 @@
 package io.vertx.spi.cluster.ignite;
 
 import io.vertx.codegen.annotations.DataObject;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.*;
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.ssl.SslContextFactory;
-
-import javax.cache.configuration.Factory;
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 import static org.apache.ignite.ssl.SslContextFactory.*;
 
@@ -412,86 +397,5 @@ public class IgniteSslOptions {
     JsonObject json = new JsonObject();
     IgniteSslOptionsConverter.toJson(this, json);
     return json;
-  }
-
-  /**
-   * Convert to IgniteConfiguration
-   *
-   * @return the SslContextFactory
-   */
-  public Factory<SSLContext> toConfig(Vertx vertx) {
-    if (keyStoreFilePath == null || keyStoreFilePath.isEmpty()) {
-      return createSslFactory(vertx, protocol);
-    }
-    return createIgniteSslFactory();
-  }
-
-  @Deprecated
-  private Factory<SSLContext> createIgniteSslFactory() {
-    SslContextFactory sslContextFactory = new SslContextFactory();
-    sslContextFactory.setProtocol(protocol);
-    sslContextFactory.setKeyAlgorithm(keyAlgorithm);
-    sslContextFactory.setKeyStoreType(keyStoreType);
-    sslContextFactory.setKeyStoreFilePath(keyStoreFilePath);
-    if (keyStorePassword != null) {
-      sslContextFactory.setKeyStorePassword(keyStorePassword.toCharArray());
-    }
-    sslContextFactory.setTrustStoreType(trustStoreType);
-    sslContextFactory.setTrustStoreFilePath(trustStoreFilePath);
-    if (trustStorePassword != null) {
-      sslContextFactory.setTrustStorePassword(trustStorePassword.toCharArray());
-    }
-    if (trustAll) {
-      sslContextFactory.setTrustManagers(getDisabledTrustManager());
-    }
-    return sslContextFactory;
-  }
-
-  private Factory<SSLContext> createSslFactory(Vertx vertx, String protocol) {
-    final SecureRandom random = new SecureRandom();
-    final List<KeyManager> keyManagers = new ArrayList<>();
-    final List<TrustManager> trustManagers = new ArrayList<>();
-    try {
-      keyManagers.addAll(toKeyManagers(vertx, pemKeyCertOptions));
-      trustManagers.addAll(toTrusManagers(vertx, pemTrustOptions));
-      keyManagers.addAll(toKeyManagers(vertx, pfxKeyCertOptions));
-      trustManagers.addAll(toTrusManagers(vertx, pfxTrustOptions));
-      keyManagers.addAll(toKeyManagers(vertx, jksKeyCertOptions));
-      trustManagers.addAll(toTrusManagers(vertx, jksTrustOptions));
-    } catch (Exception e) {
-      throw new IgniteException(e);
-    }
-    if (keyManagers.isEmpty()) {
-      return null;
-    }
-    if (trustAll) {
-      trustManagers.clear();
-      trustManagers.add(getDisabledTrustManager());
-    }
-    final KeyManager[] keyManagerArray = keyManagers.toArray(new KeyManager[0]);
-    final TrustManager[] trustManagerArray = trustManagers.toArray(new TrustManager[0]);
-    return () -> {
-      try {
-        SSLContext sslContext = SSLContext.getInstance(protocol);
-        sslContext.init(keyManagerArray, trustManagerArray, random);
-        return sslContext;
-      } catch (NoSuchAlgorithmException | KeyManagementException e) {
-        throw new IgniteException(e);
-      }
-    };
-  }
-
-  private List<KeyManager> toKeyManagers(Vertx vertx, KeyCertOptions keyCertOptions) throws Exception {
-    if (keyCertOptions != null) {
-      return Arrays.asList(keyCertOptions.getKeyManagerFactory(vertx).getKeyManagers());
-    }
-    return new ArrayList<>();
-  }
-
-  private List<TrustManager> toTrusManagers(Vertx vertx, TrustOptions trustOptions) throws Exception {
-    if (trustOptions != null) {
-      return Arrays.asList(trustOptions.getTrustManagerFactory(vertx).getTrustManagers());
-    }
-    return new ArrayList<>();
   }
 }

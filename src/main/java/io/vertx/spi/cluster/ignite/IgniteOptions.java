@@ -17,14 +17,7 @@ package io.vertx.spi.cluster.ignite;
 
 import io.vertx.codegen.annotations.DataObject;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.events.EventType;
-import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 
 import java.util.*;
 
@@ -418,72 +411,5 @@ public class IgniteOptions {
     JsonObject json = new JsonObject();
     IgniteOptionsConverter.toJson(this, json);
     return json;
-  }
-
-  /**
-   * Convert to IgniteConfiguration
-   *
-   * @return the IgniteConfiguration
-   */
-  public IgniteConfiguration toConfig(Vertx vertx) {
-    IgniteConfiguration configuration = new IgniteConfiguration();
-    configuration.setLocalHost(localHost);
-    configuration.setCommunicationSpi(new TcpCommunicationSpi()
-      .setLocalPort(localPort)
-      .setConnectionsPerNode(connectionsPerNode)
-      .setConnectTimeout(connectTimeout)
-      .setIdleConnectionTimeout(idleConnectionTimeout)
-      .setMaxConnectTimeout(maxConnectTimeout)
-      .setReconnectCount(reconnectCount));
-    configuration.setIncludeEventTypes(includeEventTypes.stream()
-      .map(IgniteEventType::valueOf)
-      .mapToInt(e -> e.eventType)
-      .toArray());
-    configuration.setMetricsLogFrequency(metricsLogFrequency);
-    configuration.setDiscoverySpi(discoveryOptions.toConfig());
-    configuration.setCacheConfiguration(cacheConfiguration.stream()
-      .map(IgniteCacheOptions::toConfig)
-      .toArray(CacheConfiguration[]::new));
-    if(sslOptions != null) {
-      configuration.setSslContextFactory(sslOptions.toConfig(vertx));
-    }
-
-    DataStorageConfiguration storageCfg = new DataStorageConfiguration();
-    DataRegionConfiguration defaultRegion = new DataRegionConfiguration();
-    defaultRegion.setName(DFLT_DATA_REG_DEFAULT_NAME);
-    defaultRegion.setInitialSize(defaultRegionInitialSize);
-    defaultRegion.setMaxSize(Math.max(defaultRegionMaxSize, defaultRegionInitialSize));
-    storageCfg.setDefaultDataRegionConfiguration(defaultRegion);
-    configuration.setDataStorageConfiguration(storageCfg);
-    return configuration;
-  }
-
-  enum IgniteEventType {
-    EVT_CACHE_ENTRY_CREATED(EventType.EVT_CACHE_ENTRY_CREATED),
-    EVT_CACHE_ENTRY_DESTROYED(EventType.EVT_CACHE_ENTRY_DESTROYED),
-    EVT_CACHE_ENTRY_EVICTED(EventType.EVT_CACHE_ENTRY_EVICTED),
-    EVT_CACHE_OBJECT_PUT(EventType.EVT_CACHE_OBJECT_PUT),
-    EVT_CACHE_OBJECT_READ(EventType.EVT_CACHE_OBJECT_READ),
-    EVT_CACHE_OBJECT_REMOVED(EventType.EVT_CACHE_OBJECT_REMOVED),
-    EVT_CACHE_OBJECT_LOCKED(EventType.EVT_CACHE_OBJECT_LOCKED),
-    EVT_CACHE_OBJECT_UNLOCKED(EventType.EVT_CACHE_OBJECT_UNLOCKED),
-    EVT_CACHE_OBJECT_EXPIRED(EventType.EVT_CACHE_OBJECT_EXPIRED);
-
-    private final int eventType;
-    private static final Map<Integer, IgniteEventType> MAP = new HashMap<>();
-
-    static {
-      for (IgniteEventType t : IgniteEventType.values()) {
-        MAP.put(t.eventType, t);
-      }
-    }
-
-    IgniteEventType(int eventType) {
-      this.eventType = eventType;
-    }
-
-    public static IgniteEventType valueOf(int eventType) {
-      return MAP.get(eventType);
-    }
   }
 }

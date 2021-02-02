@@ -3,6 +3,7 @@ package io.vertx.spi.cluster.ignite;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxException;
 import io.vertx.core.json.JsonObject;
+import io.vertx.spi.cluster.ignite.util.ConfigHelper;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
@@ -73,7 +74,7 @@ public class IgniteOptionsTest {
     assertEquals(options.getMaxConnectTimeout(), ((TcpCommunicationSpi) config.getCommunicationSpi()).getMaxConnectTimeout());
     assertEquals(options.getReconnectCount(), ((TcpCommunicationSpi) config.getCommunicationSpi()).getReconnectCount());
     assertEquals(options.getIncludeEventTypes(), Arrays.stream(config.getIncludeEventTypes())
-      .mapToObj(IgniteOptions.IgniteEventType::valueOf)
+      .mapToObj(ConfigHelper.IgniteEventType::valueOf)
       .map(Objects::toString)
       .collect(Collectors.toList()));
     assertEquals(options.getMetricsLogFrequency(), config.getMetricsLogFrequency());
@@ -159,7 +160,7 @@ public class IgniteOptionsTest {
   @Test
   public void toConfig() {
     IgniteOptions options = createIgniteOptions();
-    IgniteConfiguration config = options.toConfig(Vertx.vertx());
+    IgniteConfiguration config = ConfigHelper.toIgniteConfig(Vertx.vertx(), options);
     checkConfig(options, config);
   }
 
@@ -168,14 +169,14 @@ public class IgniteOptionsTest {
     IgniteOptions options = new IgniteOptions()
       .setDiscoverySpi(new IgniteDiscoveryOptions()
         .setType("NotExistingSpi"));
-    options.toConfig(Vertx.vertx());
+    ConfigHelper.toIgniteConfig(Vertx.vertx(), options);
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void unsupportedEventType() {
     IgniteOptions options = new IgniteOptions()
       .setIncludeEventTypes(Arrays.asList("EVT_NOT_EXISTING1", "EVT_NOT_EXISTING2"));
-    options.toConfig(Vertx.vertx());
+    ConfigHelper.toIgniteConfig(Vertx.vertx(), options);
   }
 
   private void checkJson(IgniteOptions options, JsonObject json) {
@@ -324,7 +325,7 @@ public class IgniteOptionsTest {
     assertEquals(options.getPemKeyCertOptions().getKeyPath(), "src/test/resources/server-key.pem");
     assertEquals(options.getPemKeyCertOptions().getCertPath(), "src/test/resources/server-cert.pem");
     assertEquals(options.getPemTrustOptions().getCertPaths().get(0), "src/test/resources/ca.pem");
-    assertEquals(options.toConfig(Vertx.vertx()).create().getProtocol(), "TLSv1.2");
+    assertEquals(ConfigHelper.toSslContextFactoryConfig(Vertx.vertx(), options).create().getProtocol(), "TLSv1.2");
   }
 
   private static final String IGNITE_JSON_PFX_CERT = "{\n" +
@@ -349,7 +350,7 @@ public class IgniteOptionsTest {
     assertEquals(options.getPfxKeyCertOptions().getPassword(), "wibble");
     assertEquals(options.getPfxTrustOptions().getPath(), "src/test/resources/ca.p12");
     assertEquals(options.getPfxTrustOptions().getPassword(), "wibble");
-    assertEquals(options.toConfig(Vertx.vertx()).create().getProtocol(), "TLSv1.2");
+    assertEquals(ConfigHelper.toSslContextFactoryConfig(Vertx.vertx(), options).create().getProtocol(), "TLSv1.2");
   }
 
   private static final String IGNITE_JSON_JKS_CERT = "{\n" +
@@ -374,6 +375,6 @@ public class IgniteOptionsTest {
     assertEquals(options.getJksKeyCertOptions().getPassword(), "123456");
     assertEquals(options.getJksTrustOptions().getPath(), "src/test/resources/server.jks");
     assertEquals(options.getJksTrustOptions().getPassword(), "123456");
-    assertEquals(options.toConfig(Vertx.vertx()).create().getProtocol(), "TLSv1.2");
+    assertEquals(ConfigHelper.toSslContextFactoryConfig(Vertx.vertx(), options).create().getProtocol(), "TLSv1.2");
   }
 }
