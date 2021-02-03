@@ -104,10 +104,14 @@ In the example below the default config is extended to activate TLS for cluster 
   }],
   "sslContextFactory": {
     "protocol": "TLSv1.2",
-    "keyStoreFilePath": "server.jks",
-    "keyStorePassword": "changeme",
-    "trustStoreFilePath": "server.jks",
-    "trustStorePassword": "changeme",
+    "jksKeyCertOptions": {
+      "path": "server.jks",
+      "password": "changeme",
+    },
+    "jksTrustOptions": {
+      "path": "server.jks",
+      "password": "changeme",
+    },
     "trustAll": false
   },
   "includeEventTypes": ["EVT_CACHE_OBJECT_PUT", "EVT_CACHE_OBJECT_REMOVED"],

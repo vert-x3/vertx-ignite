@@ -17,7 +17,7 @@ package io.vertx.spi.cluster.ignite;
 
 import io.vertx.codegen.annotations.DataObject;
 import io.vertx.core.json.JsonObject;
-import org.apache.ignite.ssl.SslContextFactory;
+import io.vertx.core.net.*;
 
 import static org.apache.ignite.ssl.SslContextFactory.*;
 
@@ -34,6 +34,12 @@ public class IgniteSslOptions {
   private String trustStoreType;
   private String trustStoreFilePath;
   private String trustStorePassword;
+  private PemKeyCertOptions pemKeyCertOptions;
+  private PemTrustOptions pemTrustOptions;
+  private PfxOptions pfxKeyCertOptions;
+  private PfxOptions pfxTrustOptions;
+  private JksOptions jksKeyCertOptions;
+  private JksOptions jksTrustOptions;
   private boolean trustAll;
 
   /**
@@ -61,6 +67,12 @@ public class IgniteSslOptions {
     this.trustStoreType = options.trustStoreType;
     this.trustStoreFilePath = options.trustStoreFilePath;
     this.trustStorePassword = options.trustStorePassword;
+    this.pemKeyCertOptions = options.pemKeyCertOptions;
+    this.pemTrustOptions = options.pemTrustOptions;
+    this.pfxKeyCertOptions = options.pfxKeyCertOptions;
+    this.pfxTrustOptions = options.pfxTrustOptions;
+    this.jksKeyCertOptions = options.jksKeyCertOptions;
+    this.jksTrustOptions = options.jksTrustOptions;
     this.trustAll = options.trustAll;
   }
 
@@ -98,7 +110,9 @@ public class IgniteSslOptions {
    * Gets algorithm that will be used to create a key manager.
    *
    * @return Key manager algorithm.
+   * @deprecated Use vert.x ssl certificate options instead. It will be removed in vert.x 4.1
    */
+  @Deprecated
   public String getKeyAlgorithm() {
     return keyAlgorithm;
   }
@@ -109,7 +123,9 @@ public class IgniteSslOptions {
    *
    * @param keyAlgorithm Key algorithm name.
    * @return reference to this, for fluency
+   * @deprecated Use vert.x ssl certificate options instead. It will be removed in vert.x 4.1
    */
+  @Deprecated
   public IgniteSslOptions setKeyAlgorithm(String keyAlgorithm) {
     this.keyAlgorithm = keyAlgorithm;
     return this;
@@ -119,7 +135,9 @@ public class IgniteSslOptions {
    * Gets key store type used for context creation.
    *
    * @return Key store type.
+   * @deprecated Use vert.x ssl certificate options instead. It will be removed in vert.x 4.1
    */
+  @Deprecated
   public String getKeyStoreType() {
     return keyStoreType;
   }
@@ -129,7 +147,9 @@ public class IgniteSslOptions {
    *
    * @param keyStoreType Key store type.
    * @return reference to this, for fluency
+   * @deprecated Use vert.x ssl certificate options instead. It will be removed in vert.x 4.1
    */
+  @Deprecated
   public IgniteSslOptions setKeyStoreType(String keyStoreType) {
     this.keyStoreType = keyStoreType;
     return this;
@@ -139,7 +159,9 @@ public class IgniteSslOptions {
    * Gets path to the key store file.
    *
    * @return Path to key store file.
+   * @deprecated Use vert.x jksKeyCertOptions.path instead. It will be removed in vert.x 4.1
    */
+  @Deprecated
   public String getKeyStoreFilePath() {
     return keyStoreFilePath;
   }
@@ -150,7 +172,9 @@ public class IgniteSslOptions {
    *
    * @param keyStoreFilePath Path to key store file.
    * @return reference to this, for fluency
+   * @deprecated Use vert.x jksKeyCertOptions.path instead. It will be removed in vert.x 4.1
    */
+  @Deprecated
   public IgniteSslOptions setKeyStoreFilePath(String keyStoreFilePath) {
     this.keyStoreFilePath = keyStoreFilePath;
     return this;
@@ -160,7 +184,9 @@ public class IgniteSslOptions {
    * Gets key store password.
    *
    * @return Key store password.
+   * @deprecated Use vert.x jksKeyCertOptions.password instead. It will be removed in vert.x 4.1
    */
+  @Deprecated
   public String getKeyStorePassword() {
     return keyStorePassword;
   }
@@ -170,7 +196,9 @@ public class IgniteSslOptions {
    *
    * @param keyStorePassword Key store password.
    * @return reference to this, for fluency
+   * @deprecated Use vert.x jksKeyCertOptions.password instead. It will be removed in vert.x 4.1
    */
+  @Deprecated
   public IgniteSslOptions setKeyStorePassword(String keyStorePassword) {
     this.keyStorePassword = keyStorePassword;
     return this;
@@ -180,7 +208,9 @@ public class IgniteSslOptions {
    * Gets trust store type used for context creation.
    *
    * @return trust store type.
+   * @deprecated Use vert.x jksTrustOptions instead. It will be removed in vert.x 4.1
    */
+  @Deprecated
   public String getTrustStoreType() {
     return trustStoreType;
   }
@@ -190,7 +220,9 @@ public class IgniteSslOptions {
    *
    * @param trustStoreType Trust store type.
    * @return reference to this, for fluency
+   * @deprecated Use vert.x jksTrustOptions instead. It will be removed in vert.x 4.1
    */
+  @Deprecated
   public IgniteSslOptions setTrustStoreType(String trustStoreType) {
     this.trustStoreType = trustStoreType;
     return this;
@@ -200,7 +232,9 @@ public class IgniteSslOptions {
    * Gets path to the trust store file.
    *
    * @return Path to the trust store file.
+   * @deprecated Use vert.x jksTrustOptions.path instead. It will be removed in vert.x 4.1
    */
+  @Deprecated
   public String getTrustStoreFilePath() {
     return trustStoreFilePath;
   }
@@ -210,7 +244,9 @@ public class IgniteSslOptions {
    *
    * @param trustStoreFilePath Path to the trust store file.
    * @return reference to this, for fluency
+   * @deprecated Use vert.x jksTrustOptions.path instead. It will be removed in vert.x 4.1
    */
+  @Deprecated
   public IgniteSslOptions setTrustStoreFilePath(String trustStoreFilePath) {
     this.trustStoreFilePath = trustStoreFilePath;
     return this;
@@ -220,7 +256,9 @@ public class IgniteSslOptions {
    * Gets trust store password.
    *
    * @return Trust store password.
+   * @deprecated Use vert.x jksTrustOptions.password instead. It will be removed in vert.x 4.1
    */
+  @Deprecated
   public String getTrustStorePassword() {
     return trustStorePassword;
   }
@@ -230,9 +268,101 @@ public class IgniteSslOptions {
    *
    * @param trustStorePassword Trust store password.
    * @return reference to this, for fluency
+   * @deprecated Use vert.x jksTrustOptions.password instead. It will be removed in vert.x 4.1
    */
+  @Deprecated
   public IgniteSslOptions setTrustStorePassword(String trustStorePassword) {
     this.trustStorePassword = trustStorePassword;
+    return this;
+  }
+
+  public PemKeyCertOptions getPemKeyCertOptions() {
+    return pemKeyCertOptions;
+  }
+
+  /**
+   * Sets PemKeyCertOptions that will be used for creating a secure socket layer.
+   *
+   * @param pemKeyCertOptions Vertx PEM KeyCertOptions.
+   * @return reference to this, for fluency
+   */
+  public IgniteSslOptions setPemKeyCertOptions(PemKeyCertOptions pemKeyCertOptions) {
+    this.pemKeyCertOptions = pemKeyCertOptions;
+    return this;
+  }
+
+  public PemTrustOptions getPemTrustOptions() {
+    return pemTrustOptions;
+  }
+
+  /**
+   * Sets PemTrustOptions that will be used for creating a secure socket layer.
+   *
+   * @param pemTrustOptions Vertx PEM TrustOptions.
+   * @return reference to this, for fluency
+   */
+  public IgniteSslOptions setPemTrustOptions(PemTrustOptions pemTrustOptions) {
+    this.pemTrustOptions = pemTrustOptions;
+    return this;
+  }
+
+  public PfxOptions getPfxKeyCertOptions() {
+    return pfxKeyCertOptions;
+  }
+
+  /**
+   * Sets PfxKeyCertOptions that will be used for creating a secure socket layer.
+   *
+   * @param pfxKeyCertOptions Vertx PFX KeyCertOptions.
+   * @return reference to this, for fluency
+   */
+  public IgniteSslOptions setPfxKeyCertOptions(PfxOptions pfxKeyCertOptions) {
+    this.pfxKeyCertOptions = pfxKeyCertOptions;
+    return this;
+  }
+
+  public PfxOptions getPfxTrustOptions() {
+    return pfxTrustOptions;
+  }
+
+  /**
+   * Sets PfxTrustOptions that will be used for creating a secure socket layer.
+   *
+   * @param pfxTrustOptions Vertx PFX TrustOptions.
+   * @return reference to this, for fluency
+   */
+  public IgniteSslOptions setPfxTrustOptions(PfxOptions pfxTrustOptions) {
+    this.pfxTrustOptions = pfxTrustOptions;
+    return this;
+  }
+
+  public JksOptions getJksKeyCertOptions() {
+    return jksKeyCertOptions;
+  }
+
+  /**
+   * Sets JksKeyCertOptions that will be used for creating a secure socket layer.
+   *
+   * @param jksKeyCertOptions Vertx JKS KeyCertOptions.
+   * @return reference to this, for fluency
+   */
+  public IgniteSslOptions setJksKeyCertOptions(JksOptions jksKeyCertOptions) {
+    this.jksKeyCertOptions = jksKeyCertOptions;
+    return this;
+  }
+
+  public JksOptions getJksTrustOptions() {
+    return jksTrustOptions;
+  }
+
+  /**
+   * Sets JksTrustOptions that will be used for creating a secure socket layer.
+   *
+   * @param jksTrustOptions Vertx JKS TrustOptions.
+   * @return reference to this, for fluency
+   */
+  public IgniteSslOptions setJksTrustOptions(JksOptions jksTrustOptions) {
+    this.jksTrustOptions = jksTrustOptions;
     return this;
   }
 
@@ -267,33 +397,5 @@ public class IgniteSslOptions {
     JsonObject json = new JsonObject();
     IgniteSslOptionsConverter.toJson(this, json);
     return json;
-  }
-
-  /**
-   * Convert to IgniteConfiguration
-   *
-   * @return the SslContextFactory
-   */
-  public SslContextFactory toConfig() {
-    if(keyStoreFilePath == null || keyStoreFilePath.isEmpty()) {
-      return null;
-    }
-    SslContextFactory sslContextFactory = new SslContextFactory();
-    sslContextFactory.setProtocol(protocol);
-    sslContextFactory.setKeyAlgorithm(keyAlgorithm);
-    sslContextFactory.setKeyStoreType(keyStoreType);
-    sslContextFactory.setKeyStoreFilePath(keyStoreFilePath);
-    if(keyStorePassword != null) {
-      sslContextFactory.setKeyStorePassword(keyStorePassword.toCharArray());
-    }
-    sslContextFactory.setTrustStoreType(trustStoreType);
-    sslContextFactory.setTrustStoreFilePath(trustStoreFilePath);
-    if(trustStorePassword != null) {
-      sslContextFactory.setTrustStorePassword(trustStorePassword.toCharArray());
-    }
-    if(trustAll) {
-      sslContextFactory.setTrustManagers(getDisabledTrustManager());
-    }
-    return sslContextFactory;
   }
 }

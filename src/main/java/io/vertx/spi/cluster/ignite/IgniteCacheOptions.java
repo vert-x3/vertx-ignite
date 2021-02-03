@@ -18,12 +18,6 @@ package io.vertx.spi.cluster.ignite;
 import io.vertx.codegen.annotations.DataObject;
 import io.vertx.core.json.JsonObject;
 import org.apache.ignite.cache.*;
-import org.apache.ignite.configuration.CacheConfiguration;
-
-import javax.cache.configuration.Factory;
-import javax.cache.expiry.*;
-
-import java.util.concurrent.TimeUnit;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.*;
 import static org.apache.ignite.configuration.CacheConfiguration.*;
@@ -576,53 +570,5 @@ public class IgniteCacheOptions {
     JsonObject json = new JsonObject();
     IgniteCacheOptionsConverter.toJson(this, json);
     return json;
-  }
-
-  /**
-   * Convert to IgniteConfiguration
-   *
-   * @return the CacheConfiguration
-   */
-  public CacheConfiguration toConfig() {
-    CacheConfiguration cfg = new CacheConfiguration<>()
-      .setName(name)
-      .setCacheMode(cacheMode)
-      .setBackups(backups)
-      .setReadFromBackup(readFromBackup)
-      .setAtomicityMode(atomicityMode)
-      .setWriteSynchronizationMode(writeSynchronizationMode)
-      .setCopyOnRead(copyOnRead)
-      .setEagerTtl(eagerTtl)
-      .setEncryptionEnabled(encryptionEnabled)
-      .setGroupName(groupName)
-      .setInvalidate(invalidate)
-      .setMaxConcurrentAsyncOperations(maxConcurrentAsyncOperations)
-      .setOnheapCacheEnabled(onheapCacheEnabled)
-      .setPartitionLossPolicy(partitionLossPolicy)
-      .setRebalanceMode(rebalanceMode)
-      .setRebalanceOrder(rebalanceOrder)
-      .setRebalanceDelay(rebalanceDelay)
-      .setMaxQueryIteratorsCount(maxQueryInteratorsCount)
-      .setEventsDisabled(eventsDisabled);
-    if(expiryPolicy != null) {
-      Duration duration = new Duration(TimeUnit.MILLISECONDS, expiryPolicy.getLong("duration"));
-      Factory<ExpiryPolicy> factory;
-      switch (expiryPolicy.getString("type", "created")) {
-        case "accessed":
-          factory = AccessedExpiryPolicy.factoryOf(duration);
-          break;
-        case "modified":
-          factory = ModifiedExpiryPolicy.factoryOf(duration);
-          break;
-        case "touched":
-          factory = TouchedExpiryPolicy.factoryOf(duration);
-          break;
-        case "created":
-        default:
-          factory = CreatedExpiryPolicy.factoryOf(duration);
-      }
-      cfg.setExpiryPolicyFactory(factory);
-    }
-    return cfg;
   }
 }

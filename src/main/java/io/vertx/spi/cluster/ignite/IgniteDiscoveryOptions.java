@@ -16,18 +16,7 @@
 package io.vertx.spi.cluster.ignite;
 
 import io.vertx.codegen.annotations.DataObject;
-import io.vertx.core.VertxException;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.apache.ignite.spi.discovery.DiscoverySpi;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
-
-import java.util.stream.Collectors;
-
-import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.*;
-import static org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder.*;
 
 /**
  * @author Lukas Prettenthaler
@@ -114,47 +103,5 @@ public class IgniteDiscoveryOptions {
     JsonObject json = new JsonObject();
     IgniteDiscoveryOptionsConverter.toJson(this, json);
     return json;
-  }
-
-  /**
-   * Convert to IgniteConfiguration
-   *
-   * @return the DiscoverySpi
-   */
-  public DiscoverySpi toConfig() {
-    switch (type) {
-      case "TcpDiscoveryVmIpFinder":
-        return new TcpDiscoverySpi()
-          .setJoinTimeout(properties.getLong("joinTimeout", DFLT_JOIN_TIMEOUT))
-          .setLocalAddress(properties.getString("localAddress", null))
-          .setLocalPort(properties.getInteger("localPort", DFLT_PORT))
-          .setLocalPortRange(properties.getInteger("localPortRange", DFLT_PORT_RANGE))
-          .setIpFinder(new TcpDiscoveryVmIpFinder()
-            .setAddresses(properties.getJsonArray("addresses", new JsonArray()).stream()
-              .map(Object::toString)
-              .collect(Collectors.toList())
-            )
-          );
-      case "TcpDiscoveryMulticastIpFinder":
-        return new TcpDiscoverySpi()
-          .setJoinTimeout(properties.getLong("joinTimeout", DFLT_JOIN_TIMEOUT))
-          .setLocalAddress(properties.getString("localAddress", null))
-          .setLocalPort(properties.getInteger("localPort", DFLT_PORT))
-          .setLocalPortRange(properties.getInteger("localPortRange", DFLT_PORT_RANGE))
-          .setIpFinder(new TcpDiscoveryMulticastIpFinder()
-            .setAddressRequestAttempts(properties.getInteger("addressRequestAttempts", DFLT_ADDR_REQ_ATTEMPTS))
-            .setLocalAddress(properties.getString("localAddress", null))
-            .setMulticastGroup(properties.getString("multicastGroup", DFLT_MCAST_GROUP))
-            .setMulticastPort(properties.getInteger("multicastPort", DFLT_MCAST_PORT))
-            .setResponseWaitTime(properties.getInteger("responseWaitTime", DFLT_RES_WAIT_TIME))
-            .setTimeToLive(properties.getInteger("timeToLive", -1))
-            .setAddresses(properties.getJsonArray("addresses", new JsonArray()).stream()
-              .map(Object::toString)
-              .collect(Collectors.toList())
-            )
-          );
-      default:
-        throw new VertxException("not discovery spi found");
-    }
   }
 }

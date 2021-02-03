@@ -40,8 +40,7 @@ import org.apache.ignite.plugin.segmentation.SegmentationPolicy;
 
 import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
-import javax.cache.expiry.ExpiryPolicy;
-import javax.cache.expiry.ModifiedExpiryPolicy;
+import javax.cache.expiry.*;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.Executor;
@@ -84,7 +83,10 @@ public class IgniteClusterManager implements ClusterManager {
   private VertxInternal vertx;
   private NodeSelector nodeSelector;
 
-  private IgniteConfiguration cfg;
+  private IgniteConfiguration extCfg;
+  private IgniteOptions extJsonConfig;
+  private URL extConfigUrl;
+
   private Ignite ignite;
   private boolean customIgnite;
   private boolean shutdownOnSegmentation;
@@ -108,33 +110,18 @@ public class IgniteClusterManager implements ClusterManager {
   @SuppressWarnings("unused")
   public IgniteClusterManager() {
     setIgniteProperties();
-    if (SPRING.inClassPath()) {
-      try {
-        cfg = ConfigHelper.lookupXmlConfiguration(this.getClass(), XML_CONFIG_FILE);
-      } catch (VertxException e) {
-        log.debug("xml config could not be loaded");
-      }
-    }
-    if (cfg == null) {
-      IgniteOptions options = new IgniteOptions(ConfigHelper.lookupJsonConfiguration(this.getClass(), CONFIG_FILE, DEFAULT_CONFIG_FILE));
-      shutdownOnSegmentation = options.isShutdownOnSegmentation();
-      cfg = options.toConfig()
-        .setGridLogger(new VertxLogger());
-    }
-    setNodeId(cfg);
   }
 
   /**
    * Creates cluster manager instance with given Ignite configuration.
    * Use this constructor in order to configure cluster manager programmatically.
    *
-   * @param cfg {@code IgniteConfiguration} instance.
+   * @param extCfg {@code IgniteConfiguration} instance.
    */
   @SuppressWarnings("unused")
-  public IgniteClusterManager(IgniteConfiguration cfg) {
+  public IgniteClusterManager(IgniteConfiguration extCfg) {
     setIgniteProperties();
-    this.cfg = cfg;
-    setNodeId(cfg);
+    this.extCfg = extCfg;
   }
 
   /**
@@ -146,8 +133,7 @@ public class IgniteClusterManager implements ClusterManager {
   @SuppressWarnings("unused")
   public IgniteClusterManager(URL configFile) {
     setIgniteProperties();
-    this.cfg = ConfigHelper.loadConfiguration(configFile);
-    setNodeId(cfg);
+    this.extConfigUrl = configFile;
   }
 
   /**
@@ -159,12 +145,7 @@ public class IgniteClusterManager implements ClusterManager {
   @SuppressWarnings("unused")
   public IgniteClusterManager(JsonObject jsonConfig) {
     setIgniteProperties();
-    IgniteOptions options = new IgniteOptions(jsonConfig);
-    this.shutdownOnSegmentation = options.isShutdownOnSegmentation();
-    this.cfg = options.toConfig()
-      .setGridLogger(new VertxLogger());
-
-    setNodeId(cfg);
+    extJsonConfig = new IgniteOptions(jsonConfig);
   }
 
   /**
@@ -291,8 +272,7 @@ public class IgniteClusterManager implements ClusterManager {
           lockReleaseExec = Executors.newCachedThreadPool(r -> new Thread(r, "vertx-ignite-service-release-lock-thread"));
 
           if (!customIgnite) {
-            cfg.setSegmentationPolicy(SegmentationPolicy.NOOP);
-            cfg.setFailureHandler(new StopNodeFailureHandler());
+            IgniteConfiguration cfg = prepareConfig();
             ignite = Ignition.start(cfg);
           }
           nodeId = nodeId(ignite.cluster().localNode());
@@ -425,10 +405,40 @@ public class IgniteClusterManager implements ClusterManager {
     return false;
   }
 
-  private void setNodeId(IgniteConfiguration cfg) {
+  private IgniteConfiguration prepareConfig() {
+    IgniteConfiguration cfg = null;
+    if (extCfg != null) {
+      cfg = extCfg;
+    } else {
+      if (SPRING.inClassPath()) {
+        try {
+          cfg = ConfigHelper.lookupXmlConfiguration(this.getClass(), XML_CONFIG_FILE);
+        } catch (VertxException e) {
+          log.debug("xml config could not be loaded");
+        }
+      }
+    }
+    if (extConfigUrl != null) {
+      cfg = ConfigHelper.loadConfiguration(extConfigUrl);
+    }
+    if (cfg == null) {
+      IgniteOptions options;
+      if (extJsonConfig == null) {
+        options = new IgniteOptions(ConfigHelper.lookupJsonConfiguration(this.getClass(), CONFIG_FILE, DEFAULT_CONFIG_FILE));
+      } else {
+        options = extJsonConfig;
+      }
+      shutdownOnSegmentation = options.isShutdownOnSegmentation();
+      cfg = ConfigHelper.toIgniteConfig(vertx, options)
+        .setGridLogger(new VertxLogger());
+    }
+
     UUID uuid = UUID.randomUUID();
     cfg.setNodeId(uuid);
     cfg.setIgniteInstanceName(VERTX_NODE_PREFIX + uuid);
+    cfg.setSegmentationPolicy(SegmentationPolicy.NOOP);
+    cfg.setFailureHandler(new StopNodeFailureHandler());
+    return cfg;
   }
 
   private <K, V> IgniteCache<K, V> getCache(String name) {
