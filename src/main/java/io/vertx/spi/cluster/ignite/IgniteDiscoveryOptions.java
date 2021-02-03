@@ -16,7 +16,9 @@
 package io.vertx.spi.cluster.ignite;
 
 import io.vertx.codegen.annotations.DataObject;
+import io.vertx.codegen.annotations.GenIgnore;
 import io.vertx.core.json.JsonObject;
+import org.apache.ignite.spi.discovery.DiscoverySpi;
 
 /**
  * @author Lukas Prettenthaler
@@ -25,6 +27,7 @@ import io.vertx.core.json.JsonObject;
 public class IgniteDiscoveryOptions {
   private String type;
   private JsonObject properties;
+  private DiscoverySpi customSpi;
 
   /**
    * Default constructor
@@ -91,6 +94,28 @@ public class IgniteDiscoveryOptions {
    */
   public IgniteDiscoveryOptions setProperties(JsonObject properties) {
     this.properties = properties;
+    return this;
+  }
+
+  /**
+   * Get the custom DiscoverySpi instance.
+   *
+   * @return DiscoverySpi.
+   */
+  @GenIgnore
+  public DiscoverySpi getCustomSpi() {
+    return customSpi;
+  }
+
+  /**
+   * Sets a custom initialized DiscoverySpi. When a custom Spi is set all other properties are ignored.
+   *
+   * @param discoverySpi DiscoverySpi implementation.
+   * @return reference to this, for fluency
+   */
+  @GenIgnore
+  public IgniteDiscoveryOptions setCustomSpi(DiscoverySpi discoverySpi) {
+    this.customSpi = discoverySpi;
     return this;
   }
 

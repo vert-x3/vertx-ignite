@@ -84,7 +84,7 @@ public class IgniteClusterManager implements ClusterManager {
   private NodeSelector nodeSelector;
 
   private IgniteConfiguration extCfg;
-  private IgniteOptions extJsonConfig;
+  private IgniteOptions extOptions;
   private URL extConfigUrl;
 
   private Ignite ignite;
@@ -144,8 +144,19 @@ public class IgniteClusterManager implements ClusterManager {
    */
   @SuppressWarnings("unused")
   public IgniteClusterManager(JsonObject jsonConfig) {
+    this(new IgniteOptions(jsonConfig));
+  }
+
+  /**
+   * Creates cluster manager instance with given IgniteOptions.
+   * Use this constructor in order to configure cluster manager programmatically.
+   *
+   * @param extOptions {@code IgniteOptions} options object.
+   */
+  @SuppressWarnings("unused")
+  public IgniteClusterManager(IgniteOptions extOptions) {
     setIgniteProperties();
-    extJsonConfig = new IgniteOptions(jsonConfig);
+    this.extOptions = extOptions;
   }
 
   /**
@@ -423,10 +434,10 @@ public class IgniteClusterManager implements ClusterManager {
     }
     if (cfg == null) {
       IgniteOptions options;
-      if (extJsonConfig == null) {
+      if (extOptions == null) {
         options = new IgniteOptions(ConfigHelper.lookupJsonConfiguration(this.getClass(), CONFIG_FILE, DEFAULT_CONFIG_FILE));
       } else {
-        options = extJsonConfig;
+        options = extOptions;
       }
       shutdownOnSegmentation = options.isShutdownOnSegmentation();
       cfg = ConfigHelper.toIgniteConfig(vertx, options)
