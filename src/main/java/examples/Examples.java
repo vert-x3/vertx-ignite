@@ -83,7 +83,7 @@ public class Examples {
       .setPemTrustOptions(pemTrust);
 
     VertxOptions options = new VertxOptions()
-      .setClusterManager(new IgniteClusterManager(igniteOptions.toJson()))
+      .setClusterManager(new IgniteClusterManager(igniteOptions))
       .setEventBusOptions(eventBusOptions);
 
     Vertx.clusteredVertx(options, res -> {

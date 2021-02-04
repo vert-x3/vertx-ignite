@@ -6,6 +6,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.spi.cluster.ignite.util.ConfigHelper;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.junit.Test;
 
@@ -36,6 +37,7 @@ public class IgniteOptionsTest {
     assertEquals(DFLT_METRICS_LOG_FREQ, options.getMetricsLogFrequency());
     assertEquals("TcpDiscoveryMulticastIpFinder", options.getDiscoverySpi().getType());
     assertEquals(0, options.getDiscoverySpi().getProperties().size());
+    assertNull(options.getDiscoverySpi().getCustomSpi());
     assertEquals(0, options.getCacheConfiguration().size());
     assertNull(options.getSslContextFactory());
     assertTrue(options.isShutdownOnSegmentation());
@@ -57,6 +59,7 @@ public class IgniteOptionsTest {
     assertEquals(DFLT_METRICS_LOG_FREQ, options.getMetricsLogFrequency());
     assertEquals("TcpDiscoveryMulticastIpFinder", options.getDiscoverySpi().getType());
     assertEquals(0, options.getDiscoverySpi().getProperties().size());
+    assertNull(options.getDiscoverySpi().getCustomSpi());
     assertEquals(0, options.getCacheConfiguration().size());
     assertNull(options.getSslContextFactory());
     assertTrue(options.isShutdownOnSegmentation());
@@ -376,5 +379,17 @@ public class IgniteOptionsTest {
     assertEquals(options.getJksTrustOptions().getPath(), "src/test/resources/server.jks");
     assertEquals(options.getJksTrustOptions().getPassword(), "123456");
     assertEquals(ConfigHelper.toSslContextFactoryConfig(Vertx.vertx(), options).create().getProtocol(), "TLSv1.2");
+  }
+
+  @Test
+  public void testCustomDiscoverySpi() {
+    DiscoverySpi customSpi = new TcpDiscoverySpi();
+    IgniteOptions options = new IgniteOptions();
+    options.getDiscoverySpi().setCustomSpi(customSpi);
+    assertEquals(options.getDiscoverySpi().getProperties(), new JsonObject());
+    assertEquals(options.getDiscoverySpi().getType(), "TcpDiscoveryMulticastIpFinder");
+    assertEquals(options.getDiscoverySpi().getCustomSpi(), customSpi);
+    IgniteConfiguration cfg = ConfigHelper.toIgniteConfig(Vertx.vertx(), options);
+    assertEquals(cfg.getDiscoverySpi(), customSpi);
   }
 }

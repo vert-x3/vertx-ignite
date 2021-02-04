@@ -222,6 +222,9 @@ public class ConfigHelper {
   }
 
   private static DiscoverySpi toDiscoverySpiConfig(IgniteDiscoveryOptions options) {
+    if(options.getCustomSpi() != null) {
+      return options.getCustomSpi();
+    }
     JsonObject properties = options.getProperties();
     switch (options.getType()) {
       case "TcpDiscoveryVmIpFinder":
