@@ -46,7 +46,7 @@ public class Lifecycle {
   public static void closeClustered(List<Vertx> clustered) throws Exception {
     CountDownLatch latch = new CountDownLatch(clustered.size());
     for (Vertx clusteredVertx : clustered) {
-      Thread.sleep(500L);
+      Thread.sleep(100L);
       clusteredVertx.close(ar -> {
         if (ar.failed()) {
           log.error("Failed to shutdown vert.x", ar.cause());
@@ -56,7 +56,7 @@ public class Lifecycle {
     }
     assertTrue(latch.await(180, TimeUnit.SECONDS));
 
-    Thread.sleep(200L);
+    Thread.sleep(100L);
 
     Collection<Ignite> list = new ArrayList<>(G.allGrids());
 

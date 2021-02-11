@@ -114,7 +114,6 @@ In the example below the default config is extended to activate TLS for cluster 
     },
     "trustAll": false
   },
-  "includeEventTypes": ["EVT_CACHE_OBJECT_PUT", "EVT_CACHE_OBJECT_REMOVED"],
   "metricsLogFrequency": 0,
   "shutdownOnSegmentation": true
 }
@@ -189,13 +188,6 @@ Then add an `ignite.xml` file like this one:
           </property>
           <property name="writeSynchronizationMode" value="FULL_SYNC"/>
         </bean>
-      </list>
-    </property>
-
-    <property name="includeEventTypes">
-      <list>
-        <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_PUT"/>
-        <util:constant static-field="org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED"/>
       </list>
     </property>
 

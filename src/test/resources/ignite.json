@@ -25,7 +25,6 @@
   ],
   "defaultRegionInitialSize": 20971520,
   "defaultRegionMaxSize": 41943040,
-  "includeEventTypes": ["EVT_CACHE_OBJECT_PUT", "EVT_CACHE_OBJECT_REMOVED"],
   "metricsLogFrequency": 0,
   "shutdownOnSegmentation": false
 }
