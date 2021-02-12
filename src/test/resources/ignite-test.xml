@@ -37,7 +37,6 @@
         <bean class="org.apache.ignite.configuration.CacheConfiguration">
           <property name="name" value="__vertx.*"/>
           <property name="cacheMode" value="REPLICATED"/>
-          <property name="readFromBackup" value="false"/>
           <property name="atomicityMode" value="ATOMIC"/>
           <property name="writeSynchronizationMode" value="FULL_SYNC"/>
         </bean>

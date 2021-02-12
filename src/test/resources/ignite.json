@@ -11,7 +11,6 @@
     {
       "name": "__vertx.*",
       "cacheMode": "REPLICATED",
-      "readFromBackup": false,
       "atomicityMode": "ATOMIC",
       "writeSynchronizationMode": "FULL_SYNC"
     }, {

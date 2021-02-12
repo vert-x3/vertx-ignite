@@ -91,7 +91,6 @@ In the example below the default config is extended to activate TLS for cluster 
   "cacheConfiguration": [{
     "name": "__vertx.*",
     "cacheMode": "REPLICATED",
-    "readFromBackup": false,
     "atomicityMode": "ATOMIC",
     "writeSynchronizationMode": "FULL_SYNC"
   }, {
@@ -171,7 +170,6 @@ Then add an `ignite.xml` file like this one:
         <bean class="org.apache.ignite.configuration.CacheConfiguration">
           <property name="name" value="__vertx.*"/>
           <property name="cacheMode" value="REPLICATED"/>
-          <property name="readFromBackup" value="false"/>
           <property name="atomicityMode" value="ATOMIC"/>
           <property name="writeSynchronizationMode" value="FULL_SYNC"/>
         </bean>
