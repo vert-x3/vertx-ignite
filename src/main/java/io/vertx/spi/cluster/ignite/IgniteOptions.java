@@ -16,7 +16,6 @@
 package io.vertx.spi.cluster.ignite;
 
 import io.vertx.codegen.annotations.DataObject;
-import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
 import java.util.*;
@@ -37,7 +36,6 @@ public class IgniteOptions {
   private long idleConnectionTimeout;
   private long maxConnectTimeout;
   private int reconnectCount;
-  private List<String> includeEventTypes;
   private long metricsLogFrequency;
   private IgniteDiscoveryOptions discoveryOptions;
   private List<IgniteCacheOptions> cacheConfiguration;
@@ -56,7 +54,6 @@ public class IgniteOptions {
     idleConnectionTimeout = DFLT_IDLE_CONN_TIMEOUT;
     reconnectCount = DFLT_RECONNECT_CNT;
     maxConnectTimeout = DFLT_MAX_CONN_TIMEOUT;
-    includeEventTypes = new ArrayList<>();
     metricsLogFrequency = DFLT_METRICS_LOG_FREQ;
     discoveryOptions = new IgniteDiscoveryOptions();
     cacheConfiguration = new ArrayList<>();
@@ -78,7 +75,6 @@ public class IgniteOptions {
     this.idleConnectionTimeout = options.idleConnectionTimeout;
     this.reconnectCount = options.reconnectCount;
     this.maxConnectTimeout = options.maxConnectTimeout;
-    this.includeEventTypes = options.includeEventTypes;
     this.metricsLogFrequency = options.metricsLogFrequency;
     this.discoveryOptions = options.discoveryOptions;
     this.cacheConfiguration = options.cacheConfiguration;
@@ -244,27 +240,6 @@ public class IgniteOptions {
    */
   public IgniteOptions setReconnectCount(int reconnectCount) {
     this.reconnectCount = reconnectCount;
-    return this;
-  }
-
-  /**
-   * Gets array of event types, which will be recorded.
-   *
-   * @return Include event types.
-   */
-  public List<String> getIncludeEventTypes() {
-    return includeEventTypes;
-  }
-
-  /**
-   * Sets array of event types, which will be recorded by {@link IgniteClusterManager#join(Promise)}.
-   * Note, that either the include event types or the exclude event types can be established.
-   *
-   * @param includeEventTypes Include event types.
-   * @return reference to this, for fluency
-   */
-  public IgniteOptions setIncludeEventTypes(List<String> includeEventTypes) {
-    this.includeEventTypes = includeEventTypes;
     return this;
   }
 
