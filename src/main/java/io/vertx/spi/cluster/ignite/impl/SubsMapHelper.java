@@ -43,7 +43,7 @@ import static java.util.stream.Collectors.toList;
  */
 public class SubsMapHelper {
   private final IgniteCache<IgniteRegistrationInfo, Boolean> map;
-  private boolean shutdown;
+  private volatile boolean shutdown;
 
   public SubsMapHelper(Ignite ignite, NodeSelector nodeSelector, VertxInternal vertxInternal) {
     map = ignite.getOrCreateCache("__vertx.subs");
