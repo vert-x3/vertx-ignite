@@ -56,16 +56,6 @@ public class IgniteOptionsConverter {
             obj.setIdleConnectionTimeout(((Number)member.getValue()).longValue());
           }
           break;
-        case "includeEventTypes":
-          if (member.getValue() instanceof JsonArray) {
-            java.util.ArrayList<java.lang.String> list =  new java.util.ArrayList<>();
-            ((Iterable<Object>)member.getValue()).forEach( item -> {
-              if (item instanceof String)
-                list.add((String)item);
-            });
-            obj.setIncludeEventTypes(list);
-          }
-          break;
         case "localHost":
           if (member.getValue() instanceof String) {
             obj.setLocalHost((String)member.getValue());
@@ -123,11 +113,6 @@ public class IgniteOptionsConverter {
       json.put("discoverySpi", obj.getDiscoverySpi().toJson());
     }
     json.put("idleConnectionTimeout", obj.getIdleConnectionTimeout());
-    if (obj.getIncludeEventTypes() != null) {
-      JsonArray array = new JsonArray();
-      obj.getIncludeEventTypes().forEach(item -> array.add(item));
-      json.put("includeEventTypes", array);
-    }
     if (obj.getLocalHost() != null) {
       json.put("localHost", obj.getLocalHost());
     }

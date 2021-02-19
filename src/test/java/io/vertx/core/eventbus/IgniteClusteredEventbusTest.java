@@ -20,7 +20,7 @@ package io.vertx.core.eventbus;
 import io.vertx.Lifecycle;
 import io.vertx.LoggingTestWatcher;
 import io.vertx.core.Vertx;
-import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.core.spi.cluster.*;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
 import org.junit.Rule;
 

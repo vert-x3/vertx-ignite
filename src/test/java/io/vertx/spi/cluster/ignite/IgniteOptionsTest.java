@@ -10,10 +10,7 @@ import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 import static org.apache.ignite.configuration.DataStorageConfiguration.*;
 import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_METRICS_LOG_FREQ;
@@ -27,7 +24,6 @@ public class IgniteOptionsTest {
   public void defaults() {
     IgniteOptions options = new IgniteOptions();
     assertNull(options.getLocalHost());
-    assertEquals(0, options.getIncludeEventTypes().size());
     assertEquals(DFLT_PORT, options.getLocalPort());
     assertEquals(DFLT_CONN_PER_NODE, options.getConnectionsPerNode());
     assertEquals(DFLT_CONN_TIMEOUT, options.getConnectTimeout());
@@ -49,7 +45,6 @@ public class IgniteOptionsTest {
   public void fromEmptyJson() {
     IgniteOptions options = new IgniteOptions(new JsonObject());
     assertNull(options.getLocalHost());
-    assertEquals(0, options.getIncludeEventTypes().size());
     assertEquals(DFLT_PORT, options.getLocalPort());
     assertEquals(DFLT_CONN_PER_NODE, options.getConnectionsPerNode());
     assertEquals(DFLT_CONN_TIMEOUT, options.getConnectTimeout());
@@ -76,10 +71,6 @@ public class IgniteOptionsTest {
     assertEquals(options.getIdleConnectionTimeout(), ((TcpCommunicationSpi) config.getCommunicationSpi()).getIdleConnectionTimeout());
     assertEquals(options.getMaxConnectTimeout(), ((TcpCommunicationSpi) config.getCommunicationSpi()).getMaxConnectTimeout());
     assertEquals(options.getReconnectCount(), ((TcpCommunicationSpi) config.getCommunicationSpi()).getReconnectCount());
-    assertEquals(options.getIncludeEventTypes(), Arrays.stream(config.getIncludeEventTypes())
-      .mapToObj(ConfigHelper.IgniteEventType::valueOf)
-      .map(Objects::toString)
-      .collect(Collectors.toList()));
     assertEquals(options.getMetricsLogFrequency(), config.getMetricsLogFrequency());
     assertEquals("TcpDiscoverySpi", config.getDiscoverySpi().getName());
     assertEquals(options.getDiscoverySpi().getProperties().getLong("joinTimeout").longValue(), ((TcpDiscoverySpi) config.getDiscoverySpi()).getJoinTimeout());
@@ -118,7 +109,6 @@ public class IgniteOptionsTest {
       .setIdleConnectionTimeout(300_000L)
       .setMaxConnectTimeout(200_000L)
       .setReconnectCount(20)
-      .setIncludeEventTypes(Arrays.asList("EVT_CACHE_OBJECT_PUT", "EVT_CACHE_OBJECT_REMOVED"))
       .setMetricsLogFrequency(10L)
       .setDiscoverySpi(new IgniteDiscoveryOptions()
         .setType("TcpDiscoveryVmIpFinder")
@@ -175,13 +165,6 @@ public class IgniteOptionsTest {
     ConfigHelper.toIgniteConfig(Vertx.vertx(), options);
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void unsupportedEventType() {
-    IgniteOptions options = new IgniteOptions()
-      .setIncludeEventTypes(Arrays.asList("EVT_NOT_EXISTING1", "EVT_NOT_EXISTING2"));
-    ConfigHelper.toIgniteConfig(Vertx.vertx(), options);
-  }
-
   private void checkJson(IgniteOptions options, JsonObject json) {
     assertEquals(options.getLocalHost(), json.getString("localHost"));
     assertEquals(options.getLocalPort(), json.getInteger("localPort").intValue());
@@ -190,7 +173,6 @@ public class IgniteOptionsTest {
     assertEquals(options.getIdleConnectionTimeout(), json.getLong("idleConnectionTimeout").longValue());
     assertEquals(options.getMaxConnectTimeout(), json.getLong("maxConnectTimeout").longValue());
     assertEquals(options.getReconnectCount(), json.getInteger("reconnectCount").intValue());
-    assertEquals(options.getIncludeEventTypes(), json.getJsonArray("includeEventTypes").getList());
     assertEquals(options.getMetricsLogFrequency(), json.getLong("metricsLogFrequency").longValue());
     assertEquals(options.isShutdownOnSegmentation(), json.getBoolean("shutdownOnSegmentation"));
     assertEquals(options.getDiscoverySpi().getType(), json.getJsonObject("discoverySpi").getString("type"));
@@ -240,7 +222,6 @@ public class IgniteOptionsTest {
     "  \"connectTimeout\": 2000,\n" +
     "  \"connectionsPerNode\": 2,\n" +
     "  \"idleConnectionTimeout\": 300000,\n" +
-    "  \"includeEventTypes\": [\"EVT_CACHE_OBJECT_PUT\", \"EVT_CACHE_OBJECT_REMOVED\"],\n" +
     "  \"localHost\": \"localHost\",\n" +
     "  \"localPort\": 12345,\n" +
     "  \"maxConnectTimeout\": 200000,\n" +

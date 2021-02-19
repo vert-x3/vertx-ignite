@@ -122,10 +122,6 @@ public class ConfigHelper {
       .setIdleConnectionTimeout(options.getIdleConnectionTimeout())
       .setMaxConnectTimeout(options.getMaxConnectTimeout())
       .setReconnectCount(options.getReconnectCount()));
-    configuration.setIncludeEventTypes(options.getIncludeEventTypes().stream()
-      .map(IgniteEventType::valueOf)
-      .mapToInt(IgniteEventType::toInt)
-      .toArray());
     configuration.setMetricsLogFrequency(options.getMetricsLogFrequency());
     configuration.setDiscoverySpi(toDiscoverySpiConfig(options.getDiscoverySpi()));
     configuration.setCacheConfiguration(options.getCacheConfiguration().stream()

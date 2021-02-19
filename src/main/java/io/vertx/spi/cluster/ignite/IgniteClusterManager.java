@@ -356,7 +356,7 @@ public class IgniteClusterManager implements ClusterManager {
             if (eventListener != null) {
               ignite.events().stopLocalListen(eventListener, IGNITE_EVENTS);
             }
-            subsMapHelper.leave(ignite);
+            subsMapHelper.leave();
             if (!customIgnite) {
               ignite.close();
             }

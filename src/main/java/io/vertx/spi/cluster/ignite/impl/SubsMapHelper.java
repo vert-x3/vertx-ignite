@@ -24,39 +24,42 @@ import io.vertx.core.spi.cluster.RegistrationInfo;
 import io.vertx.core.spi.cluster.RegistrationUpdateEvent;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.ScanQuery;
-import org.apache.ignite.events.CacheEvent;
-import org.apache.ignite.events.Event;
-import org.apache.ignite.lang.IgnitePredicate;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
+import javax.cache.event.CacheEntryEvent;
 import java.util.List;
-import java.util.Objects;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static java.util.stream.Collectors.toList;
-import static org.apache.ignite.events.EventType.*;
 
 /**
  * @author Thomas Segismont
  * @author Lukas Prettenthaler
  */
 public class SubsMapHelper {
-  private static final int[] CACHE_EVENTS = new int[]{EVT_CACHE_OBJECT_PUT, EVT_CACHE_OBJECT_REMOVED};
-
   private final IgniteCache<IgniteRegistrationInfo, Boolean> map;
-  private final IgnitePredicate<Event> eventListener;
+  private volatile boolean shutdown;
 
   public SubsMapHelper(Ignite ignite, NodeSelector nodeSelector, VertxInternal vertxInternal) {
     map = ignite.getOrCreateCache("__vertx.subs");
-    eventListener = event -> listen(event, nodeSelector, vertxInternal);
-
-    ignite.events().localListen(eventListener, CACHE_EVENTS);
+    map.query(new ContinuousQuery<IgniteRegistrationInfo, Boolean>()
+      .setAutoUnsubscribe(true)
+      .setTimeInterval(100L)
+      .setPageSize(128)
+      .setLocalListener(l -> listen(l, nodeSelector, vertxInternal)));
+    shutdown = false;
   }
 
   public void get(String address, Promise<List<RegistrationInfo>> promise) {
+    if (shutdown) {
+      promise.complete(null);
+      return;
+    }
     try {
       List<RegistrationInfo> infos = map.query(new ScanQuery<IgniteRegistrationInfo, Boolean>((k, v) -> k.address().equals(address)))
         .getAll().stream()
@@ -70,6 +73,9 @@ public class SubsMapHelper {
   }
 
   public Future<Void> put(String address, RegistrationInfo registrationInfo) {
+    if (shutdown) {
+      return Future.failedFuture(new VertxException("shutdown in progress"));
+    }
     try {
       map.put(new IgniteRegistrationInfo(address, registrationInfo), Boolean.TRUE);
     } catch (IllegalStateException | CacheException e) {
@@ -79,6 +85,10 @@ public class SubsMapHelper {
   }
 
   public void remove(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
+    if (shutdown) {
+      promise.complete();
+      return;
+    }
     try {
       map.remove(new IgniteRegistrationInfo(address, registrationInfo));
       promise.complete();
@@ -99,27 +109,23 @@ public class SubsMapHelper {
     }
   }
 
-  boolean listen(Event event, final NodeSelector nodeSelector, final VertxInternal vertxInternal) {
-    if (!(event instanceof CacheEvent)) {
-      return true;
-    }
-    CacheEvent cacheEvent = (CacheEvent) event;
-    if (!Objects.equals(cacheEvent.cacheName(), map.getName())) {
-      return true;
-    }
-    vertxInternal.<List<RegistrationInfo>>executeBlocking(promise -> {
-      String address = cacheEvent.<IgniteRegistrationInfo>key().address();
-      promise.future().onSuccess(registrationInfos -> {
-        nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, registrationInfos));
-      });
-      get(address, promise);
-    });
-    return true;
+  public void leave() {
+    shutdown = true;
   }
 
-  public void leave(Ignite ignite) {
-    if (eventListener != null) {
-      ignite.events().stopLocalListen(eventListener, CACHE_EVENTS);
-    }
+  private void listen(final Iterable<CacheEntryEvent<? extends IgniteRegistrationInfo, ? extends Boolean>> events, final NodeSelector nodeSelector, final VertxInternal vertxInternal) {
+    vertxInternal.<List<RegistrationInfo>>executeBlocking(promise -> {
+      StreamSupport.stream(events.spliterator(), false)
+        .map(e -> e.getKey().address())
+        .distinct()
+        .forEach(address -> {
+          Promise<List<RegistrationInfo>> prom = Promise.promise();
+          prom.future().onSuccess(registrationInfos -> {
+            nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, registrationInfos));
+          });
+          get(address, prom);
+        });
+      promise.complete();
+    });
   }
 }
