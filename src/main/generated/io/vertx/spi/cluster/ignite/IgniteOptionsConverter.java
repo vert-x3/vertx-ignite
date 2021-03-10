@@ -26,6 +26,11 @@ public class IgniteOptionsConverter {
             obj.setCacheConfiguration(list);
           }
           break;
+        case "clientFailureDetectionTimeout":
+          if (member.getValue() instanceof Number) {
+            obj.setClientFailureDetectionTimeout(((Number)member.getValue()).longValue());
+          }
+          break;
         case "connectTimeout":
           if (member.getValue() instanceof Number) {
             obj.setConnectTimeout(((Number)member.getValue()).longValue());
@@ -44,6 +49,11 @@ public class IgniteOptionsConverter {
         case "defaultRegionMaxSize":
           if (member.getValue() instanceof Number) {
             obj.setDefaultRegionMaxSize(((Number)member.getValue()).longValue());
+          }
+          break;
+        case "defaultRegionMetricsEnabled":
+          if (member.getValue() instanceof Boolean) {
+            obj.setDefaultRegionMetricsEnabled((Boolean)member.getValue());
           }
           break;
         case "discoverySpi":
@@ -71,14 +81,39 @@ public class IgniteOptionsConverter {
             obj.setMaxConnectTimeout(((Number)member.getValue()).longValue());
           }
           break;
+        case "metricsExpireTime":
+          if (member.getValue() instanceof Number) {
+            obj.setMetricsExpireTime(((Number)member.getValue()).longValue());
+          }
+          break;
+        case "metricsHistorySize":
+          if (member.getValue() instanceof Number) {
+            obj.setMetricsHistorySize(((Number)member.getValue()).intValue());
+          }
+          break;
         case "metricsLogFrequency":
           if (member.getValue() instanceof Number) {
             obj.setMetricsLogFrequency(((Number)member.getValue()).longValue());
           }
           break;
+        case "metricsUpdateFrequency":
+          if (member.getValue() instanceof Number) {
+            obj.setMetricsUpdateFrequency(((Number)member.getValue()).longValue());
+          }
+          break;
+        case "pageSize":
+          if (member.getValue() instanceof Number) {
+            obj.setPageSize(((Number)member.getValue()).intValue());
+          }
+          break;
         case "reconnectCount":
           if (member.getValue() instanceof Number) {
             obj.setReconnectCount(((Number)member.getValue()).intValue());
+          }
+          break;
+        case "shutdownOnNodeStop":
+          if (member.getValue() instanceof Boolean) {
+            obj.setShutdownOnNodeStop((Boolean)member.getValue());
           }
           break;
         case "shutdownOnSegmentation":
@@ -89,6 +124,11 @@ public class IgniteOptionsConverter {
         case "sslContextFactory":
           if (member.getValue() instanceof JsonObject) {
             obj.setSslContextFactory(new io.vertx.spi.cluster.ignite.IgniteSslOptions((io.vertx.core.json.JsonObject)member.getValue()));
+          }
+          break;
+        case "systemViewExporterSpiDisabled":
+          if (member.getValue() instanceof Boolean) {
+            obj.setSystemViewExporterSpiDisabled((Boolean)member.getValue());
           }
           break;
       }
@@ -105,10 +145,12 @@ public class IgniteOptionsConverter {
       obj.getCacheConfiguration().forEach(item -> array.add(item.toJson()));
       json.put("cacheConfiguration", array);
     }
+    json.put("clientFailureDetectionTimeout", obj.getClientFailureDetectionTimeout());
     json.put("connectTimeout", obj.getConnectTimeout());
     json.put("connectionsPerNode", obj.getConnectionsPerNode());
     json.put("defaultRegionInitialSize", obj.getDefaultRegionInitialSize());
     json.put("defaultRegionMaxSize", obj.getDefaultRegionMaxSize());
+    json.put("defaultRegionMetricsEnabled", obj.isDefaultRegionMetricsEnabled());
     if (obj.getDiscoverySpi() != null) {
       json.put("discoverySpi", obj.getDiscoverySpi().toJson());
     }
@@ -118,11 +160,17 @@ public class IgniteOptionsConverter {
     }
     json.put("localPort", obj.getLocalPort());
     json.put("maxConnectTimeout", obj.getMaxConnectTimeout());
+    json.put("metricsExpireTime", obj.getMetricsExpireTime());
+    json.put("metricsHistorySize", obj.getMetricsHistorySize());
     json.put("metricsLogFrequency", obj.getMetricsLogFrequency());
+    json.put("metricsUpdateFrequency", obj.getMetricsUpdateFrequency());
+    json.put("pageSize", obj.getPageSize());
     json.put("reconnectCount", obj.getReconnectCount());
+    json.put("shutdownOnNodeStop", obj.isShutdownOnNodeStop());
     json.put("shutdownOnSegmentation", obj.isShutdownOnSegmentation());
     if (obj.getSslContextFactory() != null) {
       json.put("sslContextFactory", obj.getSslContextFactory().toJson());
     }
+    json.put("systemViewExporterSpiDisabled", obj.isSystemViewExporterSpiDisabled());
   }
 }

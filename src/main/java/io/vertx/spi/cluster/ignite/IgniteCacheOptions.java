@@ -47,6 +47,7 @@ public class IgniteCacheOptions {
   private int maxQueryInteratorsCount;
   private boolean eventsDisabled;
   private JsonObject expiryPolicy;
+  private boolean metricsEnabled;
 
   /**
    * Default constructor
@@ -65,6 +66,7 @@ public class IgniteCacheOptions {
     rebalanceMode = DFLT_REBALANCE_MODE;
     maxQueryInteratorsCount = DFLT_MAX_QUERY_ITERATOR_CNT;
     eventsDisabled = DFLT_EVENTS_DISABLED;
+    metricsEnabled = false;
   }
 
   /**
@@ -93,6 +95,7 @@ public class IgniteCacheOptions {
     this.maxQueryInteratorsCount = options.maxQueryInteratorsCount;
     this.eventsDisabled = options.eventsDisabled;
     this.expiryPolicy = options.expiryPolicy;
+    this.metricsEnabled = options.metricsEnabled;
   }
 
   /**
@@ -558,6 +561,22 @@ public class IgniteCacheOptions {
    */
   public IgniteCacheOptions setExpiryPolicy(JsonObject expiryPolicy) {
     this.expiryPolicy = expiryPolicy;
+    return this;
+  }
+
+  public boolean isMetricsEnabled() {
+    return metricsEnabled;
+  }
+
+  /**
+   * Sets cache metrics enabled/disabled.
+   * Defaults to false
+   *
+   * @param metricsEnabled to set.
+   * @return reference to this, for fluency
+   */
+  public IgniteCacheOptions setMetricsEnabled(boolean metricsEnabled) {
+    this.metricsEnabled = metricsEnabled;
     return this;
   }
 

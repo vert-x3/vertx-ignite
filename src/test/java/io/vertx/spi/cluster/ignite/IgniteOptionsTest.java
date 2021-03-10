@@ -2,21 +2,27 @@ package io.vertx.spi.cluster.ignite;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxException;
+import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.json.JsonObject;
+import io.vertx.spi.cluster.ignite.impl.NoopSystemViewExporterSpi;
 import io.vertx.spi.cluster.ignite.util.ConfigHelper;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.lifecycle.LifecycleEventType;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
+import org.apache.ignite.spi.metric.MetricExporterSpi;
+import org.apache.ignite.spi.metric.noop.NoopMetricExporterSpi;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.ignite.configuration.DataStorageConfiguration.*;
-import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_METRICS_LOG_FREQ;
+import static org.apache.ignite.configuration.IgniteConfiguration.*;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.*;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 
 public class IgniteOptionsTest {
 
@@ -37,8 +43,17 @@ public class IgniteOptionsTest {
     assertEquals(0, options.getCacheConfiguration().size());
     assertNull(options.getSslContextFactory());
     assertTrue(options.isShutdownOnSegmentation());
+    assertEquals(DFLT_PAGE_SIZE, options.getPageSize());
     assertEquals(DFLT_DATA_REGION_INITIAL_SIZE, options.getDefaultRegionInitialSize());
     assertEquals(DFLT_DATA_REGION_MAX_SIZE, options.getDefaultRegionMaxSize());
+    assertFalse(options.isDefaultRegionMetricsEnabled());
+    assertFalse(options.isShutdownOnNodeStop());
+    assertEquals(DFLT_METRICS_UPDATE_FREQ, options.getMetricsUpdateFrequency());
+    assertEquals(DFLT_CLIENT_FAILURE_DETECTION_TIMEOUT.longValue(), options.getClientFailureDetectionTimeout());
+    assertEquals(DFLT_METRICS_HISTORY_SIZE, options.getMetricsHistorySize());
+    assertEquals(DFLT_METRICS_EXPIRE_TIME, options.getMetricsExpireTime());
+    assertFalse(options.isSystemViewExporterSpiDisabled());
+    assertNotNull(options.getMetricExporterSpi());
   }
 
   @Test
@@ -58,8 +73,17 @@ public class IgniteOptionsTest {
     assertEquals(0, options.getCacheConfiguration().size());
     assertNull(options.getSslContextFactory());
     assertTrue(options.isShutdownOnSegmentation());
+    assertEquals(DFLT_PAGE_SIZE, options.getPageSize());
     assertEquals(DFLT_DATA_REGION_INITIAL_SIZE, options.getDefaultRegionInitialSize());
     assertEquals(DFLT_DATA_REGION_MAX_SIZE, options.getDefaultRegionMaxSize());
+    assertFalse(options.isDefaultRegionMetricsEnabled());
+    assertFalse(options.isShutdownOnNodeStop());
+    assertEquals(DFLT_METRICS_UPDATE_FREQ, options.getMetricsUpdateFrequency());
+    assertEquals(DFLT_CLIENT_FAILURE_DETECTION_TIMEOUT.longValue(), options.getClientFailureDetectionTimeout());
+    assertEquals(DFLT_METRICS_HISTORY_SIZE, options.getMetricsHistorySize());
+    assertEquals(DFLT_METRICS_EXPIRE_TIME, options.getMetricsExpireTime());
+    assertFalse(options.isSystemViewExporterSpiDisabled());
+    assertNotNull(options.getMetricExporterSpi());
   }
 
   private void checkConfig(IgniteOptions options, IgniteConfiguration config) {
@@ -95,9 +119,16 @@ public class IgniteOptionsTest {
     assertEquals(options.getCacheConfiguration().get(0).isInvalidate(), config.getCacheConfiguration()[0].isInvalidate());
     assertEquals(options.getCacheConfiguration().get(0).isOnheapCacheEnabled(), config.getCacheConfiguration()[0].isOnheapCacheEnabled());
     assertEquals(options.getCacheConfiguration().get(0).isReadFromBackup(), config.getCacheConfiguration()[0].isReadFromBackup());
+    assertEquals(options.getCacheConfiguration().get(0).isMetricsEnabled(), config.getCacheConfiguration()[0].isStatisticsEnabled());
     assertNotNull(config.getCacheConfiguration()[0].getExpiryPolicyFactory());
+    assertEquals(options.getPageSize(), config.getDataStorageConfiguration().getPageSize());
     assertEquals(options.getDefaultRegionInitialSize(), config.getDataStorageConfiguration().getDefaultDataRegionConfiguration().getInitialSize());
     assertEquals(options.getDefaultRegionMaxSize(), config.getDataStorageConfiguration().getDefaultDataRegionConfiguration().getMaxSize());
+    assertEquals(options.isDefaultRegionMetricsEnabled(), config.getDataStorageConfiguration().getDefaultDataRegionConfiguration().isMetricsEnabled());
+    assertEquals(options.getMetricsUpdateFrequency(), config.getMetricsUpdateFrequency());
+    assertEquals(options.getClientFailureDetectionTimeout(), config.getClientFailureDetectionTimeout().longValue());
+    assertEquals(options.getMetricsHistorySize(), config.getMetricsHistorySize());
+    assertEquals(options.getMetricsExpireTime(), config.getMetricsExpireTime());
   }
 
   private IgniteOptions createIgniteOptions() {
@@ -145,9 +176,21 @@ public class IgniteOptionsTest {
         .setExpiryPolicy(new JsonObject()
           .put("type", "created")
           .put("duration", 60000L)
-        )))
+        )
+        .setMetricsEnabled(true)
+      ))
+      .setPageSize(1024)
       .setDefaultRegionInitialSize(40L * 1024 * 1024)
-      .setDefaultRegionMaxSize(100L * 1024 * 1024);
+      .setDefaultRegionMaxSize(100L * 1024 * 1024)
+      .setDefaultRegionMetricsEnabled(true)
+      .setShutdownOnSegmentation(false)
+      .setShutdownOnNodeStop(true)
+      .setMetricsUpdateFrequency(10_000L)
+      .setClientFailureDetectionTimeout(15_000L)
+      .setMetricsHistorySize(1)
+      .setMetricsExpireTime(2)
+      .setSystemViewExporterSpiDisabled(false)
+      .setMetricExporterSpi(new IgniteMetricExporterOptions());
   }
 
   @Test
@@ -155,6 +198,23 @@ public class IgniteOptionsTest {
     IgniteOptions options = createIgniteOptions();
     IgniteConfiguration config = ConfigHelper.toIgniteConfig(Vertx.vertx(), options);
     checkConfig(options, config);
+  }
+
+  @Test
+  public void shutdownOnNodeStop() throws InterruptedException {
+    final CountDownLatch latch = new CountDownLatch(1);
+    VertxInternal vertx = (VertxInternal) Vertx.vertx();
+    vertx.addCloseHook(promise -> {
+      latch.countDown();
+      promise.complete();
+    });
+    IgniteOptions options = new IgniteOptions().setShutdownOnNodeStop(true);
+    IgniteConfiguration config = ConfigHelper.toIgniteConfig(vertx, options);
+    assertNotNull(config.getLifecycleBeans());
+
+    config.getLifecycleBeans()[0].onLifecycleEvent(LifecycleEventType.AFTER_NODE_STOP);
+
+    assertTrue(latch.await(10, TimeUnit.SECONDS));
   }
 
   @Test(expected = VertxException.class)
@@ -175,6 +235,7 @@ public class IgniteOptionsTest {
     assertEquals(options.getReconnectCount(), json.getInteger("reconnectCount").intValue());
     assertEquals(options.getMetricsLogFrequency(), json.getLong("metricsLogFrequency").longValue());
     assertEquals(options.isShutdownOnSegmentation(), json.getBoolean("shutdownOnSegmentation"));
+    assertEquals(options.isShutdownOnNodeStop(), json.getBoolean("shutdownOnNodeStop"));
     assertEquals(options.getDiscoverySpi().getType(), json.getJsonObject("discoverySpi").getString("type"));
     assertEquals(options.getDiscoverySpi().getProperties().getLong("joinTimeout"), json.getJsonObject("discoverySpi").getJsonObject("properties").getLong("joinTimeout"));
     assertEquals(options.getSslContextFactory().getProtocol(), json.getJsonObject("sslContextFactory").getString("protocol"));
@@ -207,8 +268,16 @@ public class IgniteOptionsTest {
     assertEquals(options.getCacheConfiguration().get(0).isReadFromBackup(), json.getJsonArray("cacheConfiguration").getJsonObject(0).getBoolean("readFromBackup"));
     assertEquals(options.getCacheConfiguration().get(0).getExpiryPolicy().getString("type"), json.getJsonArray("cacheConfiguration").getJsonObject(0).getJsonObject("expiryPolicy").getString("type"));
     assertEquals(options.getCacheConfiguration().get(0).getExpiryPolicy().getString("duration"), json.getJsonArray("cacheConfiguration").getJsonObject(0).getJsonObject("expiryPolicy").getString("duration"));
+    assertEquals(options.getCacheConfiguration().get(0).isMetricsEnabled(), json.getJsonArray("cacheConfiguration").getJsonObject(0).getBoolean("metricsEnabled"));
+    assertEquals(options.getPageSize(), json.getInteger("pageSize").intValue());
     assertEquals(options.getDefaultRegionInitialSize(), json.getLong("defaultRegionInitialSize").longValue());
     assertEquals(options.getDefaultRegionMaxSize(), json.getLong("defaultRegionMaxSize").longValue());
+    assertEquals(options.isDefaultRegionMetricsEnabled(), json.getBoolean("defaultRegionMetricsEnabled"));
+    assertEquals(options.getMetricsUpdateFrequency(), json.getLong("metricsUpdateFrequency").longValue());
+    assertEquals(options.getClientFailureDetectionTimeout(), json.getLong("clientFailureDetectionTimeout").longValue());
+    assertEquals(options.getMetricsHistorySize(), json.getInteger("metricsHistorySize").intValue());
+    assertEquals(options.getMetricsExpireTime(), json.getLong("metricsExpireTime").longValue());
+    assertEquals(options.isSystemViewExporterSpiDisabled(), json.getBoolean("systemViewExporterSpiDisabled"));
   }
 
   @Test
@@ -228,6 +297,7 @@ public class IgniteOptionsTest {
     "  \"metricsLogFrequency\": 10,\n" +
     "  \"reconnectCount\": 20,\n" +
     "  \"shutdownOnSegmentation\": true,\n" +
+    "  \"shutdownOnNodeStop\": false, \n" +
     "  \"discoverySpi\": {\n" +
     "    \"type\": \"TcpDiscoveryVmIpFinder\",\n" +
     "    \"properties\": {\n" +
@@ -255,6 +325,7 @@ public class IgniteOptionsTest {
     "    \"rebalanceMode\": \"SYNC\",\n" +
     "    \"rebalanceOrder\": 1,\n" +
     "    \"writeSynchronizationMode\": \"FULL_SYNC\",\n" +
+    "    \"metricsEnabled\": true,\n" +
     "    \"expiryPolicy\": {\n" +
     "      \"type\": \"created\",\n" +
     "      \"duration\": 60000\n" +
@@ -271,8 +342,15 @@ public class IgniteOptionsTest {
     "    \"trustStorePassword\": \"123456\",\n" +
     "    \"trustStoreType\": \"JKS\"\n" +
     "  },\n" +
+    "  \"pageSize\": 1024,\n" +
     "  \"defaultRegionInitialSize\": 41943040,\n" +
-    "  \"defaultRegionMaxSize\": 104857600\n" +
+    "  \"defaultRegionMaxSize\": 104857600,\n" +
+    "  \"defaultRegionMetricsEnabled\": true,\n" +
+    "  \"metricsUpdateFrequency\": 100000,\n" +
+    "  \"clientFailureDetectionTimeout\": 200000,\n" +
+    "  \"metricsHistorySize\": 1,\n" +
+    "  \"metricsExpireTime\": 2,\n" +
+    "  \"systemViewExporterSpiDisabled\": true\n" +
     "}";
 
   @Test
@@ -372,5 +450,30 @@ public class IgniteOptionsTest {
     assertEquals(options.getDiscoverySpi().getCustomSpi(), customSpi);
     IgniteConfiguration cfg = ConfigHelper.toIgniteConfig(Vertx.vertx(), options);
     assertEquals(cfg.getDiscoverySpi(), customSpi);
+  }
+
+  @Test
+  public void testCustomMetricExporterSpi() {
+    MetricExporterSpi customSpi = new NoopMetricExporterSpi();
+    IgniteOptions options = new IgniteOptions();
+    options.getMetricExporterSpi().setCustomSpi(customSpi);
+    IgniteConfiguration cfg = ConfigHelper.toIgniteConfig(Vertx.vertx(), options);
+    assertEquals(customSpi, cfg.getMetricExporterSpi()[0]);
+  }
+
+  @Test
+  public void testSystemViewExporterSpiDisabled() {
+    IgniteOptions options = new IgniteOptions().setSystemViewExporterSpiDisabled(true);
+    IgniteConfiguration cfg = ConfigHelper.toIgniteConfig(Vertx.vertx(), options);
+    assertNotNull(cfg.getSystemViewExporterSpi());
+    assertEquals(1, cfg.getSystemViewExporterSpi().length);
+    assertTrue(cfg.getSystemViewExporterSpi()[0] instanceof NoopSystemViewExporterSpi);
+  }
+
+  @Test
+  public void testSystemViewExporterSpiEnabled() {
+    IgniteOptions options = new IgniteOptions().setSystemViewExporterSpiDisabled(false);
+    IgniteConfiguration cfg = ConfigHelper.toIgniteConfig(Vertx.vertx(), options);
+    assertNull(cfg.getSystemViewExporterSpi());
   }
 }

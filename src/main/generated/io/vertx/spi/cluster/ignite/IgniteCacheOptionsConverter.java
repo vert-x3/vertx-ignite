@@ -76,6 +76,11 @@ public class IgniteCacheOptionsConverter {
             obj.setMaxQueryInteratorsCount(((Number)member.getValue()).intValue());
           }
           break;
+        case "metricsEnabled":
+          if (member.getValue() instanceof Boolean) {
+            obj.setMetricsEnabled((Boolean)member.getValue());
+          }
+          break;
         case "name":
           if (member.getValue() instanceof String) {
             obj.setName((String)member.getValue());
@@ -145,6 +150,7 @@ public class IgniteCacheOptionsConverter {
     json.put("invalidate", obj.isInvalidate());
     json.put("maxConcurrentAsyncOperations", obj.getMaxConcurrentAsyncOperations());
     json.put("maxQueryInteratorsCount", obj.getMaxQueryInteratorsCount());
+    json.put("metricsEnabled", obj.isMetricsEnabled());
     if (obj.getName() != null) {
       json.put("name", obj.getName());
     }
