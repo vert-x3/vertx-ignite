@@ -14,7 +14,6 @@
       "writeSynchronizationMode": "FULL_SYNC"
     }
   ],
-  "includeEventTypes": ["EVT_CACHE_OBJECT_PUT", "EVT_CACHE_OBJECT_REMOVED"],
   "metricsLogFrequency": 0,
   "shutdownOnSegmentation": true
 }

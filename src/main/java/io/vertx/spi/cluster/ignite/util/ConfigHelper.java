@@ -7,10 +7,8 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.KeyCertOptions;
 import io.vertx.core.net.TrustOptions;
-import io.vertx.spi.cluster.ignite.IgniteCacheOptions;
-import io.vertx.spi.cluster.ignite.IgniteDiscoveryOptions;
-import io.vertx.spi.cluster.ignite.IgniteOptions;
-import io.vertx.spi.cluster.ignite.IgniteSslOptions;
+import io.vertx.spi.cluster.ignite.*;
+import io.vertx.spi.cluster.ignite.impl.NoopSystemViewExporterSpi;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.*;
@@ -18,9 +16,9 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.lifecycle.LifecycleEventType;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
@@ -41,15 +39,16 @@ import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_DATA_REG_DEFAULT_NAME;
 import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.*;
-import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.DFLT_PORT_RANGE;
 import static org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder.*;
-import static org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder.DFLT_RES_WAIT_TIME;
 import static org.apache.ignite.ssl.SslContextFactory.getDisabledTrustManager;
 
 public class ConfigHelper {
@@ -114,30 +113,62 @@ public class ConfigHelper {
 
   public static IgniteConfiguration toIgniteConfig(Vertx vertx, IgniteOptions options) {
     IgniteConfiguration configuration = new IgniteConfiguration();
-    configuration.setLocalHost(options.getLocalHost());
-    configuration.setCommunicationSpi(new TcpCommunicationSpi()
-      .setLocalPort(options.getLocalPort())
-      .setConnectionsPerNode(options.getConnectionsPerNode())
-      .setConnectTimeout(options.getConnectTimeout())
-      .setIdleConnectionTimeout(options.getIdleConnectionTimeout())
-      .setMaxConnectTimeout(options.getMaxConnectTimeout())
-      .setReconnectCount(options.getReconnectCount()));
-    configuration.setMetricsLogFrequency(options.getMetricsLogFrequency());
-    configuration.setDiscoverySpi(toDiscoverySpiConfig(options.getDiscoverySpi()));
-    configuration.setCacheConfiguration(options.getCacheConfiguration().stream()
-      .map(ConfigHelper::toCacheConfiguration)
-      .toArray(CacheConfiguration[]::new));
-    if(options.getSslContextFactory() != null) {
+
+    configuration
+      .setLocalHost(options.getLocalHost())
+      .setCommunicationSpi(
+        new TcpCommunicationSpi()
+          .setLocalPort(options.getLocalPort())
+          .setConnectionsPerNode(options.getConnectionsPerNode())
+          .setConnectTimeout(options.getConnectTimeout())
+          .setIdleConnectionTimeout(options.getIdleConnectionTimeout())
+          .setMaxConnectTimeout(options.getMaxConnectTimeout())
+          .setReconnectCount(options.getReconnectCount())
+      )
+      .setDiscoverySpi(toDiscoverySpiConfig(options.getDiscoverySpi()))
+      .setCacheConfiguration(
+        options.getCacheConfiguration().stream()
+          .map(ConfigHelper::toCacheConfiguration)
+          .toArray(CacheConfiguration[]::new)
+      )
+      .setMetricsLogFrequency(options.getMetricsLogFrequency())
+      .setMetricsUpdateFrequency(options.getMetricsUpdateFrequency())
+      .setClientFailureDetectionTimeout(options.getClientFailureDetectionTimeout())
+      .setMetricsHistorySize(options.getMetricsHistorySize())
+      .setMetricsExpireTime(options.getMetricsExpireTime());
+
+    if (options.getSslContextFactory() != null) {
       configuration.setSslContextFactory(toSslContextFactoryConfig(vertx, options.getSslContextFactory()));
     }
 
-    DataStorageConfiguration storageCfg = new DataStorageConfiguration();
-    DataRegionConfiguration defaultRegion = new DataRegionConfiguration();
-    defaultRegion.setName(DFLT_DATA_REG_DEFAULT_NAME);
-    defaultRegion.setInitialSize(options.getDefaultRegionInitialSize());
-    defaultRegion.setMaxSize(Math.max(options.getDefaultRegionMaxSize(), options.getDefaultRegionInitialSize()));
-    storageCfg.setDefaultDataRegionConfiguration(defaultRegion);
-    configuration.setDataStorageConfiguration(storageCfg);
+    Optional.ofNullable(options.getMetricExporterSpi())
+      .map(IgniteMetricExporterOptions::getCustomSpi)
+      .ifPresent(configuration::setMetricExporterSpi);
+
+    configuration.setDataStorageConfiguration(
+      new DataStorageConfiguration()
+        .setPageSize(options.getPageSize())
+        .setDefaultDataRegionConfiguration(
+          new DataRegionConfiguration()
+            .setName(DFLT_DATA_REG_DEFAULT_NAME)
+            .setInitialSize(options.getDefaultRegionInitialSize())
+            .setMaxSize(Math.max(options.getDefaultRegionMaxSize(), options.getDefaultRegionInitialSize()))
+            .setMetricsEnabled(options.isDefaultRegionMetricsEnabled())
+        )
+    );
+
+    if (options.isShutdownOnNodeStop()) {
+      configuration.setLifecycleBeans(
+        event -> Optional.ofNullable(event)
+          .filter(LifecycleEventType.AFTER_NODE_STOP::equals)
+          .ifPresent(ignore -> vertx.close())
+      );
+    }
+
+    if (options.isSystemViewExporterSpiDisabled()) {
+      configuration.setSystemViewExporterSpi(new NoopSystemViewExporterSpi());
+    }
+
     return configuration;
   }
 
@@ -218,7 +249,7 @@ public class ConfigHelper {
   }
 
   private static DiscoverySpi toDiscoverySpiConfig(IgniteDiscoveryOptions options) {
-    if(options.getCustomSpi() != null) {
+    if (options.getCustomSpi() != null) {
       return options.getCustomSpi();
     }
     JsonObject properties = options.getProperties();
@@ -278,8 +309,9 @@ public class ConfigHelper {
       .setRebalanceOrder(options.getRebalanceOrder())
       .setRebalanceDelay(options.getRebalanceDelay())
       .setMaxQueryIteratorsCount(options.getMaxQueryInteratorsCount())
-      .setEventsDisabled(options.isEventsDisabled());
-    if(options.getExpiryPolicy() != null) {
+      .setEventsDisabled(options.isEventsDisabled())
+      .setStatisticsEnabled(options.isMetricsEnabled());
+    if (options.getExpiryPolicy() != null) {
       Duration duration = new Duration(TimeUnit.MILLISECONDS, options.getExpiryPolicy().getLong("duration"));
       Factory<ExpiryPolicy> factory;
       switch (options.getExpiryPolicy().getString("type", "created")) {
@@ -299,38 +331,5 @@ public class ConfigHelper {
       cfg.setExpiryPolicyFactory(factory);
     }
     return cfg;
-  }
-
-  public enum IgniteEventType {
-    EVT_CACHE_ENTRY_CREATED(EventType.EVT_CACHE_ENTRY_CREATED),
-    EVT_CACHE_ENTRY_DESTROYED(EventType.EVT_CACHE_ENTRY_DESTROYED),
-    EVT_CACHE_ENTRY_EVICTED(EventType.EVT_CACHE_ENTRY_EVICTED),
-    EVT_CACHE_OBJECT_PUT(EventType.EVT_CACHE_OBJECT_PUT),
-    EVT_CACHE_OBJECT_READ(EventType.EVT_CACHE_OBJECT_READ),
-    EVT_CACHE_OBJECT_REMOVED(EventType.EVT_CACHE_OBJECT_REMOVED),
-    EVT_CACHE_OBJECT_LOCKED(EventType.EVT_CACHE_OBJECT_LOCKED),
-    EVT_CACHE_OBJECT_UNLOCKED(EventType.EVT_CACHE_OBJECT_UNLOCKED),
-    EVT_CACHE_OBJECT_EXPIRED(EventType.EVT_CACHE_OBJECT_EXPIRED);
-
-    private final int eventType;
-    private static final Map<Integer, IgniteEventType> MAP = new HashMap<>();
-
-    static {
-      for (IgniteEventType t : IgniteEventType.values()) {
-        MAP.put(t.eventType, t);
-      }
-    }
-
-    IgniteEventType(int eventType) {
-      this.eventType = eventType;
-    }
-
-    public static IgniteEventType valueOf(int eventType) {
-      return MAP.get(eventType);
-    }
-
-    public int toInt() {
-      return eventType;
-    }
   }
 }

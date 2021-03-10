@@ -18,10 +18,11 @@ package io.vertx.spi.cluster.ignite;
 import io.vertx.codegen.annotations.DataObject;
 import io.vertx.core.json.JsonObject;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.apache.ignite.configuration.DataStorageConfiguration.*;
-import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_METRICS_LOG_FREQ;
+import static org.apache.ignite.configuration.IgniteConfiguration.*;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.*;
 
 /**
@@ -41,8 +42,17 @@ public class IgniteOptions {
   private List<IgniteCacheOptions> cacheConfiguration;
   private IgniteSslOptions sslOptions;
   private boolean shutdownOnSegmentation;
+  private int pageSize;
   private long defaultRegionInitialSize;
   private long defaultRegionMaxSize;
+  private boolean defaultRegionMetricsEnabled;
+  private boolean shutdownOnNodeStop;
+  private long metricsUpdateFrequency;
+  private long clientFailureDetectionTimeout;
+  private int metricsHistorySize;
+  private long metricsExpireTime;
+  private boolean systemViewExporterSpiDisabled;
+  private IgniteMetricExporterOptions metricExporterOptions;
 
   /**
    * Default constructor
@@ -58,8 +68,17 @@ public class IgniteOptions {
     discoveryOptions = new IgniteDiscoveryOptions();
     cacheConfiguration = new ArrayList<>();
     shutdownOnSegmentation = true;
+    pageSize = DFLT_PAGE_SIZE;
     defaultRegionInitialSize = DFLT_DATA_REGION_INITIAL_SIZE;
     defaultRegionMaxSize = DFLT_DATA_REGION_MAX_SIZE;
+    defaultRegionMetricsEnabled = DFLT_METRICS_ENABLED;
+    shutdownOnNodeStop = false;
+    metricsUpdateFrequency = DFLT_METRICS_UPDATE_FREQ;
+    clientFailureDetectionTimeout = DFLT_CLIENT_FAILURE_DETECTION_TIMEOUT;
+    metricsHistorySize = DFLT_METRICS_HISTORY_SIZE;
+    metricsExpireTime = DFLT_METRICS_EXPIRE_TIME;
+    systemViewExporterSpiDisabled = false;
+    metricExporterOptions = new IgniteMetricExporterOptions();
   }
 
   /**
@@ -80,8 +99,17 @@ public class IgniteOptions {
     this.cacheConfiguration = options.cacheConfiguration;
     this.sslOptions = options.sslOptions;
     this.shutdownOnSegmentation = options.shutdownOnSegmentation;
+    this.pageSize = options.pageSize;
     this.defaultRegionInitialSize = options.defaultRegionInitialSize;
     this.defaultRegionMaxSize = options.defaultRegionMaxSize;
+    this.defaultRegionMetricsEnabled = options.defaultRegionMetricsEnabled;
+    this.shutdownOnNodeStop = options.shutdownOnNodeStop;
+    this.metricsUpdateFrequency = options.metricsUpdateFrequency;
+    this.clientFailureDetectionTimeout = options.clientFailureDetectionTimeout;
+    this.metricsHistorySize = options.metricsHistorySize;
+    this.metricsExpireTime = options.metricsExpireTime;
+    this.systemViewExporterSpiDisabled = options.systemViewExporterSpiDisabled;
+    this.metricExporterOptions = options.metricExporterOptions;
   }
 
   /**
@@ -335,6 +363,22 @@ public class IgniteOptions {
     return this;
   }
 
+  public int getPageSize() {
+    return pageSize;
+  }
+
+  /**
+   * Sets page size for all data regions.
+   * Defaults to 4096 bytes
+   *
+   * @param pageSize size in bytes.
+   * @return reference to this, for fluency
+   */
+  public IgniteOptions setPageSize(int pageSize) {
+    this.pageSize = pageSize;
+    return this;
+  }
+
   /**
    * Get default data region start size.
    * Default to 256 MB
@@ -374,6 +418,133 @@ public class IgniteOptions {
    */
   public IgniteOptions setDefaultRegionMaxSize(long defaultRegionMaxSize) {
     this.defaultRegionMaxSize = defaultRegionMaxSize;
+    return this;
+  }
+
+  public boolean isDefaultRegionMetricsEnabled() {
+    return defaultRegionMetricsEnabled;
+  }
+
+  /**
+   * Sets default data region metrics enabled/disabled.
+   * Defaults to false
+   *
+   * @param defaultRegionMetricsEnabled to set.
+   * @return reference to this, for fluency
+   */
+  public IgniteOptions setDefaultRegionMetricsEnabled(boolean defaultRegionMetricsEnabled) {
+    this.defaultRegionMetricsEnabled = defaultRegionMetricsEnabled;
+    return this;
+  }
+
+  public boolean isShutdownOnNodeStop() {
+    return shutdownOnNodeStop;
+  }
+
+  /**
+   * Sets that vertx will be shutdown when the node stops.
+   * Defaults to false
+   *
+   * @param shutdownOnNodeStop to set.
+   * @return reference to this, for fluency
+   */
+  public IgniteOptions setShutdownOnNodeStop(boolean shutdownOnNodeStop) {
+    this.shutdownOnNodeStop = shutdownOnNodeStop;
+    return this;
+  }
+
+  public long getMetricsUpdateFrequency() {
+    return metricsUpdateFrequency;
+  }
+
+  /**
+   * Sets update frequency of metrics.
+   * Defaults to 2 seconds
+   *
+   * @param metricsUpdateFrequency in milliseconds.
+   * @return reference to this, for fluency
+   */
+  public IgniteOptions setMetricsUpdateFrequency(long metricsUpdateFrequency) {
+    this.metricsUpdateFrequency = metricsUpdateFrequency;
+    return this;
+  }
+
+  public long getClientFailureDetectionTimeout() {
+    return clientFailureDetectionTimeout;
+  }
+
+  /**
+   * Sets client failure detection timeout.
+   * Defaults to 30 seconds
+   *
+   * @param clientFailureDetectionTimeout in milliseconds.
+   * @return reference to this, for fluency
+   */
+  public IgniteOptions setClientFailureDetectionTimeout(long clientFailureDetectionTimeout) {
+    this.clientFailureDetectionTimeout = clientFailureDetectionTimeout;
+    return this;
+  }
+
+  public int getMetricsHistorySize() {
+    return metricsHistorySize;
+  }
+
+  /**
+   * Sets metrics history size.
+   * Defaults to 10000
+   *
+   * @param metricsHistorySize to set.
+   * @return reference to this, for fluency
+   */
+  public IgniteOptions setMetricsHistorySize(int metricsHistorySize) {
+    this.metricsHistorySize = metricsHistorySize;
+    return this;
+  }
+
+  public long getMetricsExpireTime() {
+    return metricsExpireTime;
+  }
+
+  /**
+   * Sets metrics expire time.
+   * Defaults to never expire
+   *
+   * @param metricsExpireTime in milliseconds.
+   * @return reference to this, for fluency
+   */
+  public IgniteOptions setMetricsExpireTime(long metricsExpireTime) {
+    this.metricsExpireTime = metricsExpireTime;
+    return this;
+  }
+
+  public boolean isSystemViewExporterSpiDisabled() {
+    return systemViewExporterSpiDisabled;
+  }
+
+  /**
+   * Sets that a NoOp Implementation of {@linkplain org.apache.ignite.spi.systemview.SystemViewExporterSpi} will be used.
+   * Defaults to false
+   *
+   * @param systemViewExporterSpiDisabled to set
+   * @return reference to this, for fluency
+   */
+  public IgniteOptions setSystemViewExporterSpiDisabled(boolean systemViewExporterSpiDisabled) {
+    this.systemViewExporterSpiDisabled = systemViewExporterSpiDisabled;
+    return this;
+  }
+
+  public IgniteMetricExporterOptions getMetricExporterSpi() {
+    return metricExporterOptions;
+  }
+
+  /**
+   * Sets fully configured instance of {@link IgniteMetricExporterOptions}.
+   *
+   * @param metricExporterOptions {@link IgniteMetricExporterOptions}.
+   * @return reference to this, for fluency
+   */
+  public IgniteOptions setMetricExporterSpi(IgniteMetricExporterOptions metricExporterOptions) {
+    this.metricExporterOptions = metricExporterOptions;
     return this;
   }
 
