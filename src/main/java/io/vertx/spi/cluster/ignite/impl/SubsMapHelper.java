@@ -101,7 +101,7 @@ public class SubsMapHelper {
     try {
       if (registrationInfo.localOnly()) {
         localSubs.compute(address, (add, curr) -> addToSet(registrationInfo, curr));
-        fireLocalRegistrationUpdateEvent(address);
+        fireRegistrationUpdateEvent(address);
       } else {
         map.put(new IgniteRegistrationInfo(address, registrationInfo), Boolean.TRUE);
       }
@@ -125,7 +125,7 @@ public class SubsMapHelper {
     try {
       if (registrationInfo.localOnly()) {
         localSubs.computeIfPresent(address, (add, curr) -> removeFromSet(registrationInfo, curr));
-        fireLocalRegistrationUpdateEvent(address);
+        fireRegistrationUpdateEvent(address);
       } else {
         map.remove(new IgniteRegistrationInfo(address, registrationInfo));
       }
@@ -156,7 +156,7 @@ public class SubsMapHelper {
     shutdown = true;
   }
 
-  private void fireLocalRegistrationUpdateEvent(String address) {
+  private void fireRegistrationUpdateEvent(String address) {
     throttling.onEvent(address);
   }
 
@@ -165,7 +165,9 @@ public class SubsMapHelper {
     prom.future().onSuccess(registrationInfos -> {
       nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, registrationInfos));
     });
-    get(address, prom);
+    if (nodeSelector.wantsUpdatesFor(address)) {
+      get(address, prom);
+    }
   }
 
   private void listen(final Iterable<CacheEntryEvent<? extends IgniteRegistrationInfo, ? extends Boolean>> events, final VertxInternal vertxInternal) {
@@ -173,7 +175,7 @@ public class SubsMapHelper {
       StreamSupport.stream(events.spliterator(), false)
         .map(e -> e.getKey().address())
         .distinct()
-        .forEach(this::getAndUpdate);
+        .forEach(this::fireRegistrationUpdateEvent);
       promise.complete();
     });
   }
