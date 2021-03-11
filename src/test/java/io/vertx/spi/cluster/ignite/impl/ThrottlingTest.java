@@ -16,6 +16,7 @@
 
 package io.vertx.spi.cluster.ignite.impl;
 
+import io.vertx.core.Promise;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.test.core.VertxTestBase;
 import org.junit.Test;
@@ -52,7 +53,9 @@ public class ThrottlingTest extends VertxTestBase {
         v.add(System.nanoTime());
         return v;
       });
-      sleep(1);
+      Promise<Void> promise = Promise.promise();
+      vertx.setTimer(1, l -> promise.complete());
+      return promise.future();
     });
 
     CountDownLatch latch = new CountDownLatch(threadCount);
@@ -91,12 +94,8 @@ public class ThrottlingTest extends VertxTestBase {
   }
 
   private void sleepMax(long time) {
-    sleep(ThreadLocalRandom.current().nextLong(time));
-  }
-
-  private void sleep(long time) {
     try {
-      MILLISECONDS.sleep(time);
+      MILLISECONDS.sleep(ThreadLocalRandom.current().nextLong(time));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }

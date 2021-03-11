@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Red Hat, Inc.
+ * Copyright 2021 Red Hat, Inc.
  *
  * Red Hat licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -160,14 +160,17 @@ public class SubsMapHelper {
     throttling.onEvent(address);
   }
 
-  private void getAndUpdate(String address) {
+  private Future<List<RegistrationInfo>> getAndUpdate(String address) {
     Promise<List<RegistrationInfo>> prom = Promise.promise();
-    prom.future().onSuccess(registrationInfos -> {
-      nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, registrationInfos));
-    });
     if (nodeSelector.wantsUpdatesFor(address)) {
+      prom.future().onSuccess(registrationInfos -> {
+        nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, registrationInfos));
+      });
       get(address, prom);
+    } else {
+      prom.complete();
     }
+    return prom.future();
   }
 
   private void listen(final Iterable<CacheEntryEvent<? extends IgniteRegistrationInfo, ? extends Boolean>> events, final VertxInternal vertxInternal) {

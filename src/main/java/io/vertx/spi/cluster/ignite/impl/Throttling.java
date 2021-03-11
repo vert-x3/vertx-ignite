@@ -16,65 +16,135 @@
 
 package io.vertx.spi.cluster.ignite.impl;
 
+import io.vertx.core.Future;
 import io.vertx.core.impl.VertxInternal;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class Throttling {
 
   // @formatter:off
   private enum State {
     NEW {
-      State pending() { return PENDING; }
-      State start() { return RUNNING; }
-      State done() { throw new IllegalStateException(); }
-      State next() { throw new IllegalStateException(); }
+      State pending() {
+        return PENDING;
+      }
+
+      State start() {
+        return RUNNING;
+      }
+
+      State done() {
+        throw new IllegalStateException();
+      }
+
+      State next() {
+        throw new IllegalStateException();
+      }
     },
     PENDING {
-      State pending() { return this; }
-      State start() { return RUNNING; }
-      State done() { throw new IllegalStateException(); }
-      State next() { throw new IllegalStateException(); }
+      State pending() {
+        return this;
+      }
+
+      State start() {
+        return RUNNING;
+      }
+
+      State done() {
+        throw new IllegalStateException();
+      }
+
+      State next() {
+        throw new IllegalStateException();
+      }
     },
     RUNNING {
-      State pending() { return RUNNING_PENDING; }
-      State start() { throw new IllegalStateException(); }
-      State done() { return FINISHED; }
-      State next() { throw new IllegalStateException(); }
+      State pending() {
+        return RUNNING_PENDING;
+      }
+
+      State start() {
+        throw new IllegalStateException();
+      }
+
+      State done() {
+        return FINISHED;
+      }
+
+      State next() {
+        throw new IllegalStateException();
+      }
     },
     RUNNING_PENDING {
-      State pending() { return this; }
-      State start() { throw new IllegalStateException(); }
-      State done() { return FINISHED_PENDING; }
-      State next() { throw new IllegalStateException(); }
+      State pending() {
+        return this;
+      }
+
+      State start() {
+        throw new IllegalStateException();
+      }
+
+      State done() {
+        return FINISHED_PENDING;
+      }
+
+      State next() {
+        throw new IllegalStateException();
+      }
     },
     FINISHED {
-      State pending() { return FINISHED_PENDING; }
-      State start() { throw new IllegalStateException(); }
-      State done() { throw new IllegalStateException(); }
-      State next() { return null; }
+      State pending() {
+        return FINISHED_PENDING;
+      }
+
+      State start() {
+        throw new IllegalStateException();
+      }
+
+      State done() {
+        throw new IllegalStateException();
+      }
+
+      State next() {
+        return null;
+      }
     },
     FINISHED_PENDING {
-      State pending() { return this; }
-      State start() { throw new IllegalStateException(); }
-      State done() { throw new IllegalStateException(); }
-      State next() { return NEW; }
+      State pending() {
+        return this;
+      }
+
+      State start() {
+        throw new IllegalStateException();
+      }
+
+      State done() {
+        throw new IllegalStateException();
+      }
+
+      State next() {
+        return NEW;
+      }
     };
 
     abstract State pending();
+
     abstract State start();
+
     abstract State done();
+
     abstract State next();
   }
   // @formatter:on
 
   private final VertxInternal vertx;
-  private final Consumer<String> action;
+  private final Function<String, Future<?>> action;
   private final ConcurrentMap<String, State> map;
 
-  public Throttling(VertxInternal vertx, Consumer<String> action) {
+  public Throttling(VertxInternal vertx, Function<String, Future<?>> action) {
     this.vertx = vertx;
     this.action = action;
     map = new ConcurrentHashMap<>();
@@ -83,26 +153,18 @@ public class Throttling {
   public void onEvent(String address) {
     State curr = map.compute(address, (s, state) -> state == null ? State.NEW : state.pending());
     if (curr == State.NEW) {
-      vertx.executeBlocking(promise -> {
-        run(address);
-        promise.complete();
-      }, false);
+      run(address);
     }
   }
 
   private void run(String address) {
     map.computeIfPresent(address, (s, state) -> state.start());
-    try {
-      action.accept(address);
-    } finally {
+    action.apply(address).onComplete(ar -> {
       map.computeIfPresent(address, (s, state) -> state.done());
       vertx.setTimer(20, l -> {
-        vertx.executeBlocking(promise -> {
-          checkState(address);
-          promise.complete();
-        }, false);
+        checkState(address);
       });
-    }
+    });
   }
 
   private void checkState(String address) {
