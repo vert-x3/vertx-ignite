@@ -186,7 +186,7 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   @Override
-  public void nodeListener(NodeListener nodeListener) {
+  public synchronized void nodeListener(NodeListener nodeListener) {
     this.nodeListener = nodeListener;
   }
 
