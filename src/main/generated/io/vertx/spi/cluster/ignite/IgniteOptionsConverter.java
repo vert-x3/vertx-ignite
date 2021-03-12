@@ -81,6 +81,11 @@ public class IgniteOptionsConverter {
             obj.setMaxConnectTimeout(((Number)member.getValue()).longValue());
           }
           break;
+        case "metricExporterSpi":
+          if (member.getValue() instanceof JsonObject) {
+            obj.setMetricExporterSpi(new io.vertx.spi.cluster.ignite.IgniteMetricExporterOptions((io.vertx.core.json.JsonObject)member.getValue()));
+          }
+          break;
         case "metricsExpireTime":
           if (member.getValue() instanceof Number) {
             obj.setMetricsExpireTime(((Number)member.getValue()).longValue());
@@ -160,6 +165,9 @@ public class IgniteOptionsConverter {
     }
     json.put("localPort", obj.getLocalPort());
     json.put("maxConnectTimeout", obj.getMaxConnectTimeout());
+    if (obj.getMetricExporterSpi() != null) {
+      json.put("metricExporterSpi", obj.getMetricExporterSpi().toJson());
+    }
     json.put("metricsExpireTime", obj.getMetricsExpireTime());
     json.put("metricsHistorySize", obj.getMetricsHistorySize());
     json.put("metricsLogFrequency", obj.getMetricsLogFrequency());
