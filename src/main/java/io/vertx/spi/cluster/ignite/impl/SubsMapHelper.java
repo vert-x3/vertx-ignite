@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Red Hat, Inc.
+ * Copyright 2021 Red Hat, Inc.
  *
  * Red Hat licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -30,8 +30,9 @@ import org.apache.ignite.cache.query.ScanQuery;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.event.CacheEntryEvent;
-import java.util.List;
-import java.util.TreeSet;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -43,16 +44,21 @@ import static java.util.stream.Collectors.toList;
  */
 public class SubsMapHelper {
   private final IgniteCache<IgniteRegistrationInfo, Boolean> map;
+  private final NodeSelector nodeSelector;
+  private final ConcurrentMap<String, Set<RegistrationInfo>> localSubs = new ConcurrentHashMap<>();
+  private final Throttling throttling;
   private volatile boolean shutdown;
 
   public SubsMapHelper(Ignite ignite, NodeSelector nodeSelector, VertxInternal vertxInternal) {
     map = ignite.getOrCreateCache("__vertx.subs");
+    this.nodeSelector = nodeSelector;
+    throttling = new Throttling(vertxInternal, this::getAndUpdate);
+    shutdown = false;
     map.query(new ContinuousQuery<IgniteRegistrationInfo, Boolean>()
       .setAutoUnsubscribe(true)
       .setTimeInterval(100L)
       .setPageSize(128)
-      .setLocalListener(l -> listen(l, nodeSelector, vertxInternal)));
-    shutdown = false;
+      .setLocalListener(l -> listen(l, vertxInternal)));
   }
 
   public void get(String address, Promise<List<RegistrationInfo>> promise) {
@@ -66,6 +72,22 @@ public class SubsMapHelper {
         .map(Cache.Entry::getKey)
         .map(IgniteRegistrationInfo::registrationInfo)
         .collect(toList());
+      int size = infos.size();
+      Set<RegistrationInfo> local = localSubs.get(address);
+      if (local != null) {
+        synchronized (local) {
+          size += local.size();
+          if (size == 0) {
+            promise.complete(Collections.emptyList());
+            return;
+          }
+          infos.addAll(local);
+        }
+      } else if (size == 0) {
+        promise.complete(Collections.emptyList());
+        return;
+      }
+
       promise.complete(infos);
     } catch (IllegalStateException | CacheException e) {
       promise.fail(new VertxException(e));
@@ -77,11 +99,22 @@ public class SubsMapHelper {
       return Future.failedFuture(new VertxException("shutdown in progress"));
     }
     try {
-      map.put(new IgniteRegistrationInfo(address, registrationInfo), Boolean.TRUE);
+      if (registrationInfo.localOnly()) {
+        localSubs.compute(address, (add, curr) -> addToSet(registrationInfo, curr));
+        fireRegistrationUpdateEvent(address);
+      } else {
+        map.put(new IgniteRegistrationInfo(address, registrationInfo), Boolean.TRUE);
+      }
     } catch (IllegalStateException | CacheException e) {
       return Future.failedFuture(new VertxException(e));
     }
     return Future.succeededFuture();
+  }
+
+  private Set<RegistrationInfo> addToSet(RegistrationInfo registrationInfo, Set<RegistrationInfo> curr) {
+    Set<RegistrationInfo> res = curr != null ? curr : Collections.synchronizedSet(new LinkedHashSet<>());
+    res.add(registrationInfo);
+    return res;
   }
 
   public void remove(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
@@ -90,11 +123,21 @@ public class SubsMapHelper {
       return;
     }
     try {
-      map.remove(new IgniteRegistrationInfo(address, registrationInfo));
+      if (registrationInfo.localOnly()) {
+        localSubs.computeIfPresent(address, (add, curr) -> removeFromSet(registrationInfo, curr));
+        fireRegistrationUpdateEvent(address);
+      } else {
+        map.remove(new IgniteRegistrationInfo(address, registrationInfo));
+      }
       promise.complete();
     } catch (IllegalStateException | CacheException e) {
       promise.fail(new VertxException(e));
     }
+  }
+
+  private Set<RegistrationInfo> removeFromSet(RegistrationInfo registrationInfo, Set<RegistrationInfo> curr) {
+    curr.remove(registrationInfo);
+    return curr.isEmpty() ? null : curr;
   }
 
   public void removeAllForNode(String nodeId) {
@@ -113,18 +156,29 @@ public class SubsMapHelper {
     shutdown = true;
   }
 
-  private void listen(final Iterable<CacheEntryEvent<? extends IgniteRegistrationInfo, ? extends Boolean>> events, final NodeSelector nodeSelector, final VertxInternal vertxInternal) {
+  private void fireRegistrationUpdateEvent(String address) {
+    throttling.onEvent(address);
+  }
+
+  private Future<List<RegistrationInfo>> getAndUpdate(String address) {
+    Promise<List<RegistrationInfo>> prom = Promise.promise();
+    if (nodeSelector.wantsUpdatesFor(address)) {
+      prom.future().onSuccess(registrationInfos -> {
+        nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, registrationInfos));
+      });
+      get(address, prom);
+    } else {
+      prom.complete();
+    }
+    return prom.future();
+  }
+
+  private void listen(final Iterable<CacheEntryEvent<? extends IgniteRegistrationInfo, ? extends Boolean>> events, final VertxInternal vertxInternal) {
     vertxInternal.<List<RegistrationInfo>>executeBlocking(promise -> {
       StreamSupport.stream(events.spliterator(), false)
         .map(e -> e.getKey().address())
         .distinct()
-        .forEach(address -> {
-          Promise<List<RegistrationInfo>> prom = Promise.promise();
-          prom.future().onSuccess(registrationInfos -> {
-            nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, registrationInfos));
-          });
-          get(address, prom);
-        });
+        .forEach(this::fireRegistrationUpdateEvent);
       promise.complete();
     });
   }
