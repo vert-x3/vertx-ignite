@@ -15,11 +15,15 @@
  */
 package io.vertx.spi.cluster.ignite;
 
+import io.vertx.codegen.annotations.DataObject;
+import io.vertx.codegen.annotations.GenIgnore;
+import io.vertx.core.json.JsonObject;
 import org.apache.ignite.spi.metric.MetricExporterSpi;
 
 /**
  * @author Markus Spika
  */
+@DataObject(generateConverter = true)
 public class IgniteMetricExporterOptions {
 
   private MetricExporterSpi customSpi;
@@ -37,6 +41,17 @@ public class IgniteMetricExporterOptions {
     this.customSpi = options.customSpi;
   }
 
+  /**
+   * Constructor from JSON
+   *
+   * @param options the JSON
+   */
+  public IgniteMetricExporterOptions(JsonObject options) {
+    this();
+    IgniteMetricExporterOptionsConverter.fromJson(options, this);
+  }
+
+  @GenIgnore
   public MetricExporterSpi getCustomSpi() {
     return customSpi;
   }
@@ -47,8 +62,20 @@ public class IgniteMetricExporterOptions {
    * @param metricExporterSpi to set.
    * @return reference to this, for fluency
    */
+  @GenIgnore
   public IgniteMetricExporterOptions setCustomSpi(MetricExporterSpi metricExporterSpi) {
     this.customSpi = metricExporterSpi;
     return this;
+  }
+
+  /**
+   * Convert to JSON
+   *
+   * @return the JSON
+   */
+  public JsonObject toJson() {
+    JsonObject json = new JsonObject();
+    IgniteMetricExporterOptionsConverter.toJson(this, json);
+    return json;
   }
 }

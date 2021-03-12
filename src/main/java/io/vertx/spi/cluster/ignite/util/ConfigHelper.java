@@ -24,6 +24,7 @@ import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
+import org.apache.ignite.spi.metric.MetricExporterSpi;
 import org.apache.ignite.ssl.SslContextFactory;
 
 import javax.cache.configuration.Factory;
@@ -126,6 +127,7 @@ public class ConfigHelper {
           .setReconnectCount(options.getReconnectCount())
       )
       .setDiscoverySpi(toDiscoverySpiConfig(options.getDiscoverySpi()))
+      .setMetricExporterSpi(toMetricExporterSpi(options.getMetricExporterSpi()))
       .setCacheConfiguration(
         options.getCacheConfiguration().stream()
           .map(ConfigHelper::toCacheConfiguration)
@@ -140,10 +142,6 @@ public class ConfigHelper {
     if (options.getSslContextFactory() != null) {
       configuration.setSslContextFactory(toSslContextFactoryConfig(vertx, options.getSslContextFactory()));
     }
-
-    Optional.ofNullable(options.getMetricExporterSpi())
-      .map(IgniteMetricExporterOptions::getCustomSpi)
-      .ifPresent(configuration::setMetricExporterSpi);
 
     configuration.setDataStorageConfiguration(
       new DataStorageConfiguration()
@@ -287,6 +285,13 @@ public class ConfigHelper {
       default:
         throw new VertxException("not discovery spi found");
     }
+  }
+
+  private static MetricExporterSpi[] toMetricExporterSpi(IgniteMetricExporterOptions options) {
+    return Optional.ofNullable(options)
+      .map(IgniteMetricExporterOptions::getCustomSpi)
+      .map(spi -> new MetricExporterSpi[]{spi})
+      .orElse(new MetricExporterSpi[0]);
   }
 
   private static CacheConfiguration toCacheConfiguration(IgniteCacheOptions options) {
