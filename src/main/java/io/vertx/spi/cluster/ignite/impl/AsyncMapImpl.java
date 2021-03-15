@@ -101,8 +101,18 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
   }
 
   @Override
+  public Future<V> replace(K k, V v, long ttl) {
+    return executeWithTtl(cache -> cache.getAndReplaceAsync(marshal(k), marshal(v)), ttl);
+  }
+
+  @Override
   public Future<Boolean> replaceIfPresent(K k, V oldValue, V newValue) {
     return execute(cache -> cache.replaceAsync(marshal(k), marshal(oldValue), marshal(newValue)));
+  }
+
+  @Override
+  public Future<Boolean> replaceIfPresent(K k, V oldValue, V newValue, long ttl) {
+    return executeWithTtl(cache -> cache.replaceAsync(marshal(k), marshal(oldValue), marshal(newValue)), ttl);
   }
 
   @Override
