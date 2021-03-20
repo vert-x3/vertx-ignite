@@ -4,7 +4,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.VertxException;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.json.JsonObject;
-import io.vertx.spi.cluster.ignite.impl.NoopSystemViewExporterSpi;
 import io.vertx.spi.cluster.ignite.util.ConfigHelper;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.lifecycle.LifecycleEventType;
@@ -52,7 +51,6 @@ public class IgniteOptionsTest {
     assertEquals(DFLT_CLIENT_FAILURE_DETECTION_TIMEOUT.longValue(), options.getClientFailureDetectionTimeout());
     assertEquals(DFLT_METRICS_HISTORY_SIZE, options.getMetricsHistorySize());
     assertEquals(DFLT_METRICS_EXPIRE_TIME, options.getMetricsExpireTime());
-    assertFalse(options.isSystemViewExporterSpiDisabled());
     assertNotNull(options.getMetricExporterSpi());
   }
 
@@ -82,7 +80,6 @@ public class IgniteOptionsTest {
     assertEquals(DFLT_CLIENT_FAILURE_DETECTION_TIMEOUT.longValue(), options.getClientFailureDetectionTimeout());
     assertEquals(DFLT_METRICS_HISTORY_SIZE, options.getMetricsHistorySize());
     assertEquals(DFLT_METRICS_EXPIRE_TIME, options.getMetricsExpireTime());
-    assertFalse(options.isSystemViewExporterSpiDisabled());
     assertNotNull(options.getMetricExporterSpi());
   }
 
@@ -189,7 +186,6 @@ public class IgniteOptionsTest {
       .setClientFailureDetectionTimeout(15_000L)
       .setMetricsHistorySize(1)
       .setMetricsExpireTime(2)
-      .setSystemViewExporterSpiDisabled(false)
       .setMetricExporterSpi(new IgniteMetricExporterOptions());
   }
 
@@ -277,7 +273,6 @@ public class IgniteOptionsTest {
     assertEquals(options.getClientFailureDetectionTimeout(), json.getLong("clientFailureDetectionTimeout").longValue());
     assertEquals(options.getMetricsHistorySize(), json.getInteger("metricsHistorySize").intValue());
     assertEquals(options.getMetricsExpireTime(), json.getLong("metricsExpireTime").longValue());
-    assertEquals(options.isSystemViewExporterSpiDisabled(), json.getBoolean("systemViewExporterSpiDisabled"));
   }
 
   @Test
@@ -459,21 +454,5 @@ public class IgniteOptionsTest {
     options.getMetricExporterSpi().setCustomSpi(customSpi);
     IgniteConfiguration cfg = ConfigHelper.toIgniteConfig(Vertx.vertx(), options);
     assertEquals(customSpi, cfg.getMetricExporterSpi()[0]);
-  }
-
-  @Test
-  public void testSystemViewExporterSpiDisabled() {
-    IgniteOptions options = new IgniteOptions().setSystemViewExporterSpiDisabled(true);
-    IgniteConfiguration cfg = ConfigHelper.toIgniteConfig(Vertx.vertx(), options);
-    assertNotNull(cfg.getSystemViewExporterSpi());
-    assertEquals(1, cfg.getSystemViewExporterSpi().length);
-    assertTrue(cfg.getSystemViewExporterSpi()[0] instanceof NoopSystemViewExporterSpi);
-  }
-
-  @Test
-  public void testSystemViewExporterSpiEnabled() {
-    IgniteOptions options = new IgniteOptions().setSystemViewExporterSpiDisabled(false);
-    IgniteConfiguration cfg = ConfigHelper.toIgniteConfig(Vertx.vertx(), options);
-    assertNull(cfg.getSystemViewExporterSpi());
   }
 }

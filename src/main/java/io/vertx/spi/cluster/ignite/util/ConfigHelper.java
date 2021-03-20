@@ -8,7 +8,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.KeyCertOptions;
 import io.vertx.core.net.TrustOptions;
 import io.vertx.spi.cluster.ignite.*;
-import io.vertx.spi.cluster.ignite.impl.NoopSystemViewExporterSpi;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.*;
@@ -161,10 +160,6 @@ public class ConfigHelper {
           .filter(LifecycleEventType.AFTER_NODE_STOP::equals)
           .ifPresent(ignore -> vertx.close())
       );
-    }
-
-    if (options.isSystemViewExporterSpiDisabled()) {
-      configuration.setSystemViewExporterSpi(new NoopSystemViewExporterSpi());
     }
 
     return configuration;
