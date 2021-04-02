@@ -51,7 +51,6 @@ public class IgniteOptions {
   private long clientFailureDetectionTimeout;
   private int metricsHistorySize;
   private long metricsExpireTime;
-  private boolean systemViewExporterSpiDisabled;
   private IgniteMetricExporterOptions metricExporterOptions;
 
   /**
@@ -77,7 +76,6 @@ public class IgniteOptions {
     clientFailureDetectionTimeout = DFLT_CLIENT_FAILURE_DETECTION_TIMEOUT;
     metricsHistorySize = DFLT_METRICS_HISTORY_SIZE;
     metricsExpireTime = DFLT_METRICS_EXPIRE_TIME;
-    systemViewExporterSpiDisabled = false;
     metricExporterOptions = new IgniteMetricExporterOptions();
   }
 
@@ -108,7 +106,6 @@ public class IgniteOptions {
     this.clientFailureDetectionTimeout = options.clientFailureDetectionTimeout;
     this.metricsHistorySize = options.metricsHistorySize;
     this.metricsExpireTime = options.metricsExpireTime;
-    this.systemViewExporterSpiDisabled = options.systemViewExporterSpiDisabled;
     this.metricExporterOptions = options.metricExporterOptions;
   }
 
@@ -514,22 +511,6 @@ public class IgniteOptions {
    */
   public IgniteOptions setMetricsExpireTime(long metricsExpireTime) {
     this.metricsExpireTime = metricsExpireTime;
-    return this;
-  }
-
-  public boolean isSystemViewExporterSpiDisabled() {
-    return systemViewExporterSpiDisabled;
-  }
-
-  /**
-   * Sets that a NoOp Implementation of {@linkplain org.apache.ignite.spi.systemview.SystemViewExporterSpi} will be used.
-   * Defaults to false
-   *
-   * @param systemViewExporterSpiDisabled to set
-   * @return reference to this, for fluency
-   */
-  public IgniteOptions setSystemViewExporterSpiDisabled(boolean systemViewExporterSpiDisabled) {
-    this.systemViewExporterSpiDisabled = systemViewExporterSpiDisabled;
     return this;
   }
 

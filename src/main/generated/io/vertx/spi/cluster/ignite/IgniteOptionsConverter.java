@@ -131,11 +131,6 @@ public class IgniteOptionsConverter {
             obj.setSslContextFactory(new io.vertx.spi.cluster.ignite.IgniteSslOptions((io.vertx.core.json.JsonObject)member.getValue()));
           }
           break;
-        case "systemViewExporterSpiDisabled":
-          if (member.getValue() instanceof Boolean) {
-            obj.setSystemViewExporterSpiDisabled((Boolean)member.getValue());
-          }
-          break;
       }
     }
   }
@@ -179,6 +174,5 @@ public class IgniteOptionsConverter {
     if (obj.getSslContextFactory() != null) {
       json.put("sslContextFactory", obj.getSslContextFactory().toJson());
     }
-    json.put("systemViewExporterSpiDisabled", obj.isSystemViewExporterSpiDisabled());
   }
 }
