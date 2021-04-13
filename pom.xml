@@ -9,12 +9,12 @@
   </parent>
 
   <artifactId>vertx-ignite</artifactId>
-  <version>3.9.7-SNAPSHOT</version>
+  <version>3.9.7</version>
 
   <name>Vert.x Ignite Cluster Manager</name>
 
   <properties>
-    <stack.version>3.9.7-SNAPSHOT</stack.version>
+    <stack.version>3.9.7</stack.version>
     <ignite.version>2.3.0</ignite.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
   </properties>
