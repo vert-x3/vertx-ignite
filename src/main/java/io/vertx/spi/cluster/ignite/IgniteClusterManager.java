@@ -48,6 +48,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -95,10 +96,10 @@ public class IgniteClusterManager implements ClusterManager {
   private NodeInfo nodeInfo;
   private IgniteCache<String, IgniteNodeInfo> nodeInfoMap;
   private SubsMapHelper subsMapHelper;
-  private NodeListener nodeListener;
   private IgnitePredicate<Event> eventListener;
 
   private volatile boolean active;
+  private volatile NodeListener nodeListener;
 
   private final Object monitor = new Object();
 
@@ -186,7 +187,7 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   @Override
-  public synchronized void nodeListener(NodeListener nodeListener) {
+  public void nodeListener(NodeListener nodeListener) {
     this.nodeListener = nodeListener;
   }
 
@@ -297,9 +298,7 @@ public class IgniteClusterManager implements ClusterManager {
               String id = nodeId(((DiscoveryEvent) event).eventNode());
               switch (event.type()) {
                 case EVT_NODE_JOINED:
-                  if (nodeListener != null) {
-                    nodeListener.nodeAdded(id);
-                  }
+                  notifyNodeListener(listener -> listener.nodeAdded(id));
                   log.debug("node " + id + " joined the cluster");
                   f.complete();
                   break;
@@ -308,13 +307,7 @@ public class IgniteClusterManager implements ClusterManager {
                   if (cleanNodeInfos(id)) {
                     cleanSubs(id);
                   }
-                  if (nodeListener != null) {
-                    try {
-                      nodeListener.nodeLeft(id);
-                    } catch (Exception e) {
-                      //ignore
-                    }
-                  }
+                  notifyNodeListener(listener -> listener.nodeLeft(id));
                   log.debug("node " + id + " left the cluster");
                   f.complete();
                   break;
@@ -458,6 +451,19 @@ public class IgniteClusterManager implements ClusterManager {
       return cache.withExpiryPolicy(DEFAULT_EXPIRY_POLICY_FACTORY.create());
     }
     return cache;
+  }
+
+  private void notifyNodeListener(final Consumer<NodeListener> notify) {
+    if (null == notify) return;
+
+    final NodeListener listener = nodeListener;
+    if (null == listener) return;
+
+    try {
+      notify.accept(listener);
+    } catch (final RuntimeException ignore) {
+      // exception barrier
+    }
   }
 
   private static String nodeId(ClusterNode node) {
