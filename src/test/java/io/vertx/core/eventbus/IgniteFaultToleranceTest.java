@@ -47,7 +47,7 @@ public class IgniteFaultToleranceTest extends FaultToleranceTest {
   protected void afterNodesKilled() throws Exception {
     super.afterNodesKilled();
     // Additional wait to make sure all nodes noticed the shutdowns
-    Thread.sleep(5_000);
+    Thread.sleep(10_000);
   }
 
   @Override

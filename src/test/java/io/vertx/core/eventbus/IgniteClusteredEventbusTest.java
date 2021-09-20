@@ -23,6 +23,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.spi.cluster.*;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
 import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 
 import java.util.List;
 
@@ -33,6 +34,15 @@ public class IgniteClusteredEventbusTest extends ClusteredEventBusTest {
 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Override
+  public void setUp() throws Exception {
+    System.setProperty("IGNITE_HOME", temporaryFolder.newFolder().getAbsolutePath());
+    super.setUp();
+  }
 
   @Override
   protected ClusterManager getClusterManager() {
