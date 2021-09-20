@@ -24,6 +24,7 @@ import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.util.List;
 
@@ -34,6 +35,15 @@ public class IgniteClusteredAsynchronousLockTest extends ClusteredAsynchronousLo
 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Override
+  public void setUp() throws Exception {
+    System.setProperty("IGNITE_HOME", temporaryFolder.newFolder().getAbsolutePath());
+    super.setUp();
+  }
 
   @Override
   protected ClusterManager getClusterManager() {

@@ -22,6 +22,7 @@ import io.vertx.servicediscovery.ServiceDiscoveryOptions;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
 import org.junit.Before;
 import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 
 import static com.jayway.awaitility.Awaitility.await;
 
@@ -34,8 +35,12 @@ public class IgniteDiscoveryImplClusteredTest extends DiscoveryImplTestBase {
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();
 
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   @Before
-  public void setUp() {
+  public void setUp() throws Exception {
+    System.setProperty("IGNITE_HOME", temporaryFolder.newFolder().getAbsolutePath());
     VertxOptions options = new VertxOptions()
       .setClusterManager(new IgniteClusterManager());
     Vertx.clusteredVertx(options, ar -> {
