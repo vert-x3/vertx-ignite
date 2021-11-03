@@ -442,6 +442,7 @@ public class IgniteClusterManager implements ClusterManager {
     cfg.setIgniteInstanceName(VERTX_NODE_PREFIX + uuid);
     cfg.setSegmentationPolicy(SegmentationPolicy.NOOP);
     cfg.setFailureHandler(new StopNodeFailureHandler());
+    cfg.setAsyncContinuationExecutor(Runnable::run);
     return cfg;
   }
 
