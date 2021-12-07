@@ -137,14 +137,20 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
 
   @Override
   public Future<Map<K, V>> entries() {
-    return vertx.executeBlocking(fut -> {
-      List<Cache.Entry<K, V>> all = cache.query(new ScanQuery<K, V>()).getAll();
-      Map<K, V> map = new HashMap<>(all.size());
-      for (Cache.Entry<K, V> entry : all) {
-        map.put(unmarshal(entry.getKey()), unmarshal(entry.getValue()));
+    return vertx.executeBlocking(
+      promise -> {
+        try {
+          List<Cache.Entry<K, V>> all = cache.query(new ScanQuery<K, V>()).getAll();
+          Map<K, V> map = new HashMap<>(all.size());
+          for (Cache.Entry<K, V> entry : all) {
+            map.put(unmarshal(entry.getKey()), unmarshal(entry.getValue()));
+          }
+          promise.complete(map);
+        } catch (final RuntimeException cause) {
+          promise.fail(new VertxException(cause));
+        }
       }
-      fut.complete(map);
-    });
+    );
   }
 
   private <T> Future<T> execute(Function<IgniteCache<K, V>, IgniteFuture<T>> cacheOp) {
