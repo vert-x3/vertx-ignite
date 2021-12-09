@@ -18,14 +18,11 @@
 package io.vertx.spi.cluster.ignite.impl;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxException;
-import io.vertx.core.impl.ContextInternal;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.shareddata.AsyncMap;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.lang.IgniteFuture;
 
@@ -137,14 +134,20 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
 
   @Override
   public Future<Map<K, V>> entries() {
-    return vertx.executeBlocking(fut -> {
-      List<Cache.Entry<K, V>> all = cache.query(new ScanQuery<K, V>()).getAll();
-      Map<K, V> map = new HashMap<>(all.size());
-      for (Cache.Entry<K, V> entry : all) {
-        map.put(unmarshal(entry.getKey()), unmarshal(entry.getValue()));
+    return vertx.executeBlocking(
+      promise -> {
+        try {
+          List<Cache.Entry<K, V>> all = cache.query(new ScanQuery<K, V>()).getAll();
+          Map<K, V> map = new HashMap<>(all.size());
+          for (Cache.Entry<K, V> entry : all) {
+            map.put(unmarshal(entry.getKey()), unmarshal(entry.getValue()));
+          }
+          promise.complete(map);
+        } catch (final RuntimeException cause) {
+          promise.fail(new VertxException(cause));
+        }
       }
-      fut.complete(map);
-    });
+    );
   }
 
   private <T> Future<T> execute(Function<IgniteCache<K, V>, IgniteFuture<T>> cacheOp) {
@@ -155,19 +158,23 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
    * @param ttl Time to live in ms.
    */
   private <T> Future<T> executeWithTtl(Function<IgniteCache<K, V>, IgniteFuture<T>> cacheOp, long ttl) {
-    ContextInternal ctx = vertx.getOrCreateContext();
-    Promise<T> promise = ctx.promise();
-    IgniteCache<K, V> cache0 = ttl > 0 ?
-      cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(TimeUnit.MILLISECONDS, ttl))) : cache;
+    IgniteCache<K, V> cache0 = ttl > 0
+      ? cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(TimeUnit.MILLISECONDS, ttl)))
+      : cache;
 
-    IgniteFuture<T> future = cacheOp.apply(cache0);
-    future.listen(fut -> {
-      try {
-        promise.complete(unmarshal(future.get()));
-      } catch (IgniteException e) {
-        promise.fail(new VertxException(e));
+    return vertx.executeBlocking(
+      promise -> {
+        IgniteFuture<T> future = cacheOp.apply(cache0);
+        future.listen(
+          fut -> {
+            try {
+              promise.complete(unmarshal(future.get()));
+            } catch (final RuntimeException e) {
+              promise.fail(new VertxException(e));
+            }
+          }
+        );
       }
-    });
-    return promise.future();
+    );
   }
 }
