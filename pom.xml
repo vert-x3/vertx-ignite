@@ -15,7 +15,7 @@
 
   <properties>
     <stack.version>4.2.5-SNAPSHOT</stack.version>
-    <ignite.version>2.11.1</ignite.version>
+    <ignite.version>2.12.0</ignite.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
     <jar.manifest>${project.basedir}/src/main/resources/META-INF/MANIFEST.MF</jar.manifest>
   </properties>
@@ -57,7 +57,7 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.13.1</version>
+      <version>4.13.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -104,7 +104,7 @@
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>1.2.0</version>
+      <version>1.2.10</version>
       <scope>test</scope>
     </dependency>
     <dependency>
