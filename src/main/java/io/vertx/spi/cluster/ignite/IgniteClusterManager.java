@@ -36,6 +36,7 @@ import org.apache.ignite.events.Event;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.lifecycle.LifecycleEventType;
 import org.apache.ignite.plugin.segmentation.SegmentationPolicy;
 
 import javax.cache.CacheException;
@@ -91,6 +92,8 @@ public class IgniteClusterManager implements ClusterManager {
   private Ignite ignite;
   private boolean customIgnite;
   private boolean shutdownOnSegmentation;
+  private boolean shutdownOnNodeStop;
+  private long delayAfterStart;
 
   private String nodeId;
   private NodeInfo nodeInfo;
@@ -285,6 +288,11 @@ public class IgniteClusterManager implements ClusterManager {
 
           if (!customIgnite) {
             IgniteConfiguration cfg = prepareConfig();
+            cfg.setLifecycleBeans(e -> {
+              if (e == LifecycleEventType.AFTER_NODE_STOP && shutdownOnNodeStop && active) {
+                vertx.close();
+              }
+            });
             ignite = Ignition.start(cfg);
           }
           nodeId = nodeId(ignite.cluster().localNode());
@@ -332,7 +340,7 @@ public class IgniteClusterManager implements ClusterManager {
           subsMapHelper = new SubsMapHelper(ignite, nodeSelector, vertx);
           nodeInfoMap = ignite.getOrCreateCache("__vertx.nodeInfo");
 
-          prom.complete();
+          vertx.setTimer(delayAfterStart, l -> prom.complete());
         }
       }
     }, promise);
@@ -433,6 +441,8 @@ public class IgniteClusterManager implements ClusterManager {
         options = extOptions;
       }
       shutdownOnSegmentation = options.isShutdownOnSegmentation();
+      shutdownOnNodeStop = options.isShutdownOnNodeStop();
+      delayAfterStart = options.getDelayAfterStart();
       cfg = ConfigHelper.toIgniteConfig(vertx, options)
         .setGridLogger(new VertxLogger());
     }

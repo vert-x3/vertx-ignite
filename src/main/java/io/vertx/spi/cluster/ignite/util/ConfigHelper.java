@@ -17,7 +17,6 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.lifecycle.LifecycleEventType;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
@@ -153,14 +152,6 @@ public class ConfigHelper {
             .setMetricsEnabled(options.isDefaultRegionMetricsEnabled())
         )
     );
-
-    if (options.isShutdownOnNodeStop()) {
-      configuration.setLifecycleBeans(
-        event -> Optional.ofNullable(event)
-          .filter(LifecycleEventType.AFTER_NODE_STOP::equals)
-          .ifPresent(ignore -> vertx.close())
-      );
-    }
 
     return configuration;
   }
