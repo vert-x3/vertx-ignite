@@ -52,6 +52,7 @@ public class IgniteOptions {
   private int metricsHistorySize;
   private long metricsExpireTime;
   private IgniteMetricExporterOptions metricExporterOptions;
+  private long delayAfterStart;
 
   /**
    * Default constructor
@@ -77,6 +78,7 @@ public class IgniteOptions {
     metricsHistorySize = DFLT_METRICS_HISTORY_SIZE;
     metricsExpireTime = DFLT_METRICS_EXPIRE_TIME;
     metricExporterOptions = new IgniteMetricExporterOptions();
+    delayAfterStart = 100L;
   }
 
   /**
@@ -107,6 +109,7 @@ public class IgniteOptions {
     this.metricsHistorySize = options.metricsHistorySize;
     this.metricsExpireTime = options.metricsExpireTime;
     this.metricExporterOptions = options.metricExporterOptions;
+    this.delayAfterStart = options.delayAfterStart;
   }
 
   /**
@@ -526,6 +529,22 @@ public class IgniteOptions {
    */
   public IgniteOptions setMetricExporterSpi(IgniteMetricExporterOptions metricExporterOptions) {
     this.metricExporterOptions = metricExporterOptions;
+    return this;
+  }
+
+  public long getDelayAfterStart() {
+    return delayAfterStart;
+  }
+
+  /**
+   * Sets delay in millisenconds after Ignite start.
+   * Defaults to 100ms
+   *
+   * @param delayAfterStart in milliseconds.
+   * @return reference to this, for fluency
+   */
+  public IgniteOptions setDelayAfterStart(long delayAfterStart) {
+    this.delayAfterStart = delayAfterStart;
     return this;
   }
 

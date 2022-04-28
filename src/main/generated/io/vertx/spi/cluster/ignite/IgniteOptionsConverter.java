@@ -60,6 +60,11 @@ public class IgniteOptionsConverter {
             obj.setDefaultRegionMetricsEnabled((Boolean)member.getValue());
           }
           break;
+        case "delayAfterStart":
+          if (member.getValue() instanceof Number) {
+            obj.setDelayAfterStart(((Number)member.getValue()).longValue());
+          }
+          break;
         case "discoverySpi":
           if (member.getValue() instanceof JsonObject) {
             obj.setDiscoverySpi(new io.vertx.spi.cluster.ignite.IgniteDiscoveryOptions((io.vertx.core.json.JsonObject)member.getValue()));
@@ -155,6 +160,7 @@ public class IgniteOptionsConverter {
     json.put("defaultRegionInitialSize", obj.getDefaultRegionInitialSize());
     json.put("defaultRegionMaxSize", obj.getDefaultRegionMaxSize());
     json.put("defaultRegionMetricsEnabled", obj.isDefaultRegionMetricsEnabled());
+    json.put("delayAfterStart", obj.getDelayAfterStart());
     if (obj.getDiscoverySpi() != null) {
       json.put("discoverySpi", obj.getDiscoverySpi().toJson());
     }

@@ -47,6 +47,7 @@ public class IgniteOptionsTest {
     assertEquals(DFLT_DATA_REGION_MAX_SIZE, options.getDefaultRegionMaxSize());
     assertFalse(options.isDefaultRegionMetricsEnabled());
     assertFalse(options.isShutdownOnNodeStop());
+    assertEquals(100L, options.getDelayAfterStart());
     assertEquals(DFLT_METRICS_UPDATE_FREQ, options.getMetricsUpdateFrequency());
     assertEquals(DFLT_CLIENT_FAILURE_DETECTION_TIMEOUT.longValue(), options.getClientFailureDetectionTimeout());
     assertEquals(DFLT_METRICS_HISTORY_SIZE, options.getMetricsHistorySize());
@@ -76,6 +77,7 @@ public class IgniteOptionsTest {
     assertEquals(DFLT_DATA_REGION_MAX_SIZE, options.getDefaultRegionMaxSize());
     assertFalse(options.isDefaultRegionMetricsEnabled());
     assertFalse(options.isShutdownOnNodeStop());
+    assertEquals(100L, options.getDelayAfterStart());
     assertEquals(DFLT_METRICS_UPDATE_FREQ, options.getMetricsUpdateFrequency());
     assertEquals(DFLT_CLIENT_FAILURE_DETECTION_TIMEOUT.longValue(), options.getClientFailureDetectionTimeout());
     assertEquals(DFLT_METRICS_HISTORY_SIZE, options.getMetricsHistorySize());
@@ -182,6 +184,7 @@ public class IgniteOptionsTest {
       .setDefaultRegionMetricsEnabled(true)
       .setShutdownOnSegmentation(false)
       .setShutdownOnNodeStop(true)
+      .setDelayAfterStart(200L)
       .setMetricsUpdateFrequency(10_000L)
       .setClientFailureDetectionTimeout(15_000L)
       .setMetricsHistorySize(1)
@@ -194,23 +197,6 @@ public class IgniteOptionsTest {
     IgniteOptions options = createIgniteOptions();
     IgniteConfiguration config = ConfigHelper.toIgniteConfig(Vertx.vertx(), options);
     checkConfig(options, config);
-  }
-
-  @Test
-  public void shutdownOnNodeStop() throws InterruptedException {
-    final CountDownLatch latch = new CountDownLatch(1);
-    VertxInternal vertx = (VertxInternal) Vertx.vertx();
-    vertx.addCloseHook(promise -> {
-      latch.countDown();
-      promise.complete();
-    });
-    IgniteOptions options = new IgniteOptions().setShutdownOnNodeStop(true);
-    IgniteConfiguration config = ConfigHelper.toIgniteConfig(vertx, options);
-    assertNotNull(config.getLifecycleBeans());
-
-    config.getLifecycleBeans()[0].onLifecycleEvent(LifecycleEventType.AFTER_NODE_STOP);
-
-    assertTrue(latch.await(10, TimeUnit.SECONDS));
   }
 
   @Test(expected = VertxException.class)
@@ -232,6 +218,7 @@ public class IgniteOptionsTest {
     assertEquals(options.getMetricsLogFrequency(), json.getLong("metricsLogFrequency").longValue());
     assertEquals(options.isShutdownOnSegmentation(), json.getBoolean("shutdownOnSegmentation"));
     assertEquals(options.isShutdownOnNodeStop(), json.getBoolean("shutdownOnNodeStop"));
+    assertEquals(options.getDelayAfterStart(), json.getLong("delayAfterStart").longValue());
     assertEquals(options.getDiscoverySpi().getType(), json.getJsonObject("discoverySpi").getString("type"));
     assertEquals(options.getDiscoverySpi().getProperties().getLong("joinTimeout"), json.getJsonObject("discoverySpi").getJsonObject("properties").getLong("joinTimeout"));
     assertEquals(options.getSslContextFactory().getProtocol(), json.getJsonObject("sslContextFactory").getString("protocol"));
@@ -293,6 +280,7 @@ public class IgniteOptionsTest {
     "  \"reconnectCount\": 20,\n" +
     "  \"shutdownOnSegmentation\": true,\n" +
     "  \"shutdownOnNodeStop\": false, \n" +
+    "  \"delayAfterStart\": 100, \n" +
     "  \"discoverySpi\": {\n" +
     "    \"type\": \"TcpDiscoveryVmIpFinder\",\n" +
     "    \"properties\": {\n" +
