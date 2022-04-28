@@ -1,20 +1,18 @@
 /*
- * Copyright (c) 2015 The original author or authors
- * ---------------------------------
+ * Copyright 2022 Red Hat, Inc.
  *
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * and Apache License v2.0 which accompanies this distribution.
+ * Red Hat licenses this file to you under the Apache License, version 2.0
+ * (the "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at:
  *
- * The Eclipse Public License is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * The Apache License v2.0 is available at
- * http://www.opensource.org/licenses/apache2.0.php
- *
- * You may elect to redistribute this code under either of these licenses.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  */
-
 package io.vertx.core.eventbus;
 
 import io.vertx.Lifecycle;
@@ -37,10 +35,23 @@ public class IgniteFaultToleranceTest extends FaultToleranceTest {
 
   @Override
   protected List<String> getExternalNodeSystemProperties() {
-    return Arrays.asList(
-      "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
-      "-Djava.net.preferIPv4Stack=true"
-    );
+    try {
+      // is java 9+
+      Class.forName("java.lang.module.ModuleFinder");
+      return Arrays.asList(
+        "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
+        "-Djava.net.preferIPv4Stack=true",
+        "--add-opens=java.base/java.nio=ALL-UNNAMED",
+        "--add-opens=java.base/java.util=ALL-UNNAMED",
+        "--add-opens=java.base/java.lang.invoke=ALL-UNNAMED",
+        "--add-opens=java.base/java.lang=ALL-UNNAMED"
+      );
+    } catch(ClassNotFoundException e) {
+      return Arrays.asList(
+        "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
+        "-Djava.net.preferIPv4Stack=true"
+      );
+    }
   }
 
   @Override
