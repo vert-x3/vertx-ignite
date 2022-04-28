@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Red Hat, Inc.
+ * Copyright 2022 Red Hat, Inc.
  *
  * Red Hat licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -484,7 +484,9 @@ public class IgniteCacheOptions {
    * @return Rebalancing delay, {@code 0} to start rebalancing immediately, {@code -1} to
    *      start rebalancing manually, or positive value to specify delay in milliseconds
    *      after which rebalancing should start automatically.
+   * @deprecated Use baseline topology feature instead. Please, be aware this API will be removed in the next releases.
    */
+  @Deprecated
   public long getRebalanceDelay() {
     return rebalanceDelay;
   }
@@ -494,7 +496,9 @@ public class IgniteCacheOptions {
    *
    * @param rebalanceDelay Rebalance delay to set.
    * @return reference to this, for fluency
+   * @deprecated Use baseline topology feature instead. Please, be aware this API will be removed in the next releases.
    */
+  @Deprecated
   public IgniteCacheOptions setRebalanceDelay(long rebalanceDelay) {
     this.rebalanceDelay = rebalanceDelay;
     return this;
