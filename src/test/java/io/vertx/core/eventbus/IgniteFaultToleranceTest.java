@@ -23,6 +23,8 @@ import io.vertx.spi.cluster.ignite.IgniteClusterManager;
 import java.util.Arrays;
 import java.util.List;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+
 /**
  * @author Andrey Gura
  */
@@ -52,6 +54,12 @@ public class IgniteFaultToleranceTest extends FaultToleranceTest {
         "-Djava.net.preferIPv4Stack=true"
       );
     }
+  }
+
+  @Override
+  protected void afterNodeStarted(int i, Process process) throws Exception {
+    super.afterNodeStarted(i, process);
+    MILLISECONDS.sleep(500L);
   }
 
   @Override

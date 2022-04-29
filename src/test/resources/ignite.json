@@ -25,5 +25,6 @@
   "defaultRegionInitialSize": 20971520,
   "defaultRegionMaxSize": 41943040,
   "metricsLogFrequency": 0,
-  "shutdownOnSegmentation": false
+  "shutdownOnSegmentation": false,
+  "delayAfterStart": 200
 }
