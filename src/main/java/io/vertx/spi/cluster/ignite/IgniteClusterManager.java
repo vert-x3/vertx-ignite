@@ -52,6 +52,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static javax.cache.expiry.Duration.ETERNAL;
 import static org.apache.ignite.events.EventType.*;
@@ -340,7 +341,12 @@ public class IgniteClusterManager implements ClusterManager {
           subsMapHelper = new SubsMapHelper(ignite, nodeSelector, vertx);
           nodeInfoMap = ignite.getOrCreateCache("__vertx.nodeInfo");
 
-          vertx.setTimer(delayAfterStart, l -> prom.complete());
+          try {
+            MILLISECONDS.sleep(delayAfterStart);
+            prom.complete();
+          } catch (InterruptedException e) {
+            prom.fail(e);
+          }
         }
       }
     }, promise);
