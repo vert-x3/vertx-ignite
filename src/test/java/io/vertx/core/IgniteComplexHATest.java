@@ -26,6 +26,8 @@ import org.junit.rules.TemporaryFolder;
 
 import java.util.List;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+
 /**
  * @author Andrey Gura
  */
@@ -41,6 +43,16 @@ public class IgniteComplexHATest extends ComplexHATest {
   public void setUp() throws Exception {
     System.setProperty("IGNITE_HOME", temporaryFolder.newFolder().getAbsolutePath());
     super.setUp();
+  }
+
+  @Override
+  protected void clusteredVertx(VertxOptions options, Handler<AsyncResult<Vertx>> ar) {
+    try {
+      MILLISECONDS.sleep(1000L);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    super.clusteredVertx(options, ar);
   }
 
   @Override
