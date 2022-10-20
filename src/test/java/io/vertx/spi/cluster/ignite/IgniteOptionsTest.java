@@ -157,7 +157,7 @@ public class IgniteOptionsTest {
         .setName("*")
         .setAtomicityMode("TRANSACTIONAL")
         .setBackups(1)
-        .setCacheMode("LOCAL")
+        .setCacheMode("PARTITIONED")
         .setCopyOnRead(false)
         .setEagerTtl(false)
         .setEventsDisabled(true)
@@ -291,7 +291,7 @@ public class IgniteOptionsTest {
     "    \"name\": \"*\",\n" +
     "    \"atomicityMode\": \"TRANSACTIONAL\",\n" +
     "    \"backups\": 1,\n" +
-    "    \"cacheMode\": \"LOCAL\",\n" +
+    "    \"cacheMode\": \"PARTITIONED\",\n" +
     "    \"copyOnRead\": false,\n" +
     "    \"defaultLockTimeout\": 1000,\n" +
     "    \"eagerTtl\": false,\n" +
