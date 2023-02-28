@@ -49,7 +49,7 @@ public class IgniteClusteredSessionHandlerTest extends ClusteredSessionHandlerTe
   }
 
   @Override
-  protected void closeClustered(List<Vertx> clustered) throws Exception {
-    Lifecycle.closeClustered(clustered);
+  protected void close(List<Vertx> clustered) throws Exception {
+    Lifecycle.close(clustered);
   }
 }

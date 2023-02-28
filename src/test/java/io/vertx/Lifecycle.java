@@ -43,7 +43,7 @@ import static org.junit.Assert.assertTrue;
 public class Lifecycle {
   private static final Logger log = LoggerFactory.getLogger(Lifecycle.class);
 
-  public static void closeClustered(List<Vertx> clustered) throws Exception {
+  public static void close(List<Vertx> clustered) throws Exception {
     CountDownLatch latch = new CountDownLatch(clustered.size());
     for (Vertx clusteredVertx : clustered) {
       Thread.sleep(500L);
