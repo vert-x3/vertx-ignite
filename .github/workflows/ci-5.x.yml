@@ -1,4 +1,4 @@
-name: vertx-infinispan (5.x)
+name: vertx-ignite (5.x)
 on:
   push:
     branches:
