@@ -47,7 +47,7 @@ public class Lifecycle {
     CountDownLatch latch = new CountDownLatch(clustered.size());
     for (Vertx clusteredVertx : clustered) {
       Thread.sleep(500L);
-      clusteredVertx.close(ar -> {
+      clusteredVertx.close().onComplete(ar -> {
         if (ar.failed()) {
           log.error("Failed to shutdown vert.x", ar.cause());
         }

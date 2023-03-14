@@ -197,7 +197,7 @@ public class IgniteClusterManager implements ClusterManager {
 
   @Override
   public <K, V> void getAsyncMap(String name, Promise<AsyncMap<K, V>> promise) {
-    vertx.executeBlocking(prom -> prom.complete(new AsyncMapImpl<>(getCache(name), vertx)), promise);
+    vertx.<AsyncMap<K, V>>executeBlocking(prom -> prom.complete(new AsyncMapImpl<>(getCache(name), vertx))).onComplete(promise);
   }
 
   @Override
@@ -207,7 +207,7 @@ public class IgniteClusterManager implements ClusterManager {
 
   @Override
   public void getLockWithTimeout(String name, long timeout, Promise<Lock> promise) {
-    vertx.executeBlocking(prom -> {
+    vertx.<Lock>executeBlocking(prom -> {
       IgniteSemaphore semaphore = ignite.semaphore(LOCK_SEMAPHORE_PREFIX + name, 1, true, true);
       boolean locked;
       long remaining = timeout;
@@ -221,12 +221,12 @@ public class IgniteClusterManager implements ClusterManager {
       } else {
         throw new VertxException("Timed out waiting to get lock " + name);
       }
-    }, false, promise);
+    }, false).onComplete(promise);
   }
 
   @Override
   public void getCounter(String name, Promise<Counter> promise) {
-    vertx.executeBlocking(prom -> prom.complete(new CounterImpl(ignite.atomicLong(name, 0, true))), promise);
+    vertx.<Counter>executeBlocking(prom -> prom.complete(new CounterImpl(ignite.atomicLong(name, 0, true)))).onComplete(promise);
   }
 
   @Override
@@ -240,10 +240,10 @@ public class IgniteClusterManager implements ClusterManager {
       this.nodeInfo = nodeInfo;
     }
     IgniteNodeInfo value = new IgniteNodeInfo(nodeInfo);
-    vertx.executeBlocking(prom -> {
+    vertx.<Void>executeBlocking(prom -> {
       nodeInfoMap.put(nodeId, value);
       prom.complete();
-    }, false, promise);
+    }, false).onComplete(promise);
   }
 
   @Override
@@ -280,7 +280,7 @@ public class IgniteClusterManager implements ClusterManager {
 
   @Override
   public void join(Promise<Void> promise) {
-    vertx.executeBlocking(prom -> {
+    vertx.<Void>executeBlocking(prom -> {
       synchronized (monitor) {
         if (!active) {
           active = true;
@@ -303,7 +303,7 @@ public class IgniteClusterManager implements ClusterManager {
               return false;
             }
 
-            vertx.executeBlocking(f -> {
+            vertx.<Void>executeBlocking(f -> {
               String id = nodeId(((DiscoveryEvent) event).eventNode());
               switch (event.type()) {
                 case EVT_NODE_JOINED:
@@ -332,7 +332,7 @@ public class IgniteClusterManager implements ClusterManager {
                 default:
                   f.fail("event not known");
               }
-            }, null);
+            });
 
             return true;
           };
@@ -349,12 +349,12 @@ public class IgniteClusterManager implements ClusterManager {
           }
         }
       }
-    }, promise);
+    }).onComplete(promise);
   }
 
   @Override
   public void leave(Promise<Void> promise) {
-    vertx.executeBlocking(prom -> {
+    vertx.<Void>executeBlocking(prom -> {
       synchronized (monitor) {
         if (active) {
           active = false;
@@ -376,7 +376,7 @@ public class IgniteClusterManager implements ClusterManager {
       }
 
       prom.complete();
-    }, promise);
+    }).onComplete(promise);
   }
 
   @Override
@@ -386,24 +386,24 @@ public class IgniteClusterManager implements ClusterManager {
 
   @Override
   public void addRegistration(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
-    vertx.executeBlocking(prom -> {
+    vertx.<Void>executeBlocking(prom -> {
       subsMapHelper.put(address, registrationInfo)
         .onComplete(prom);
-    }, false, promise);
+    }, false).onComplete(promise);
   }
 
   @Override
   public void removeRegistration(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
-    vertx.executeBlocking(prom -> {
+    vertx.<Void>executeBlocking(prom -> {
       subsMapHelper.remove(address, registrationInfo, prom);
-    }, false, promise);
+    }, false).onComplete(promise);
   }
 
   @Override
   public void getRegistrations(String address, Promise<List<RegistrationInfo>> promise) {
-    vertx.executeBlocking(prom -> {
+    vertx.<List<RegistrationInfo>>executeBlocking(prom -> {
       subsMapHelper.get(address, prom);
-    }, false, promise);
+    }, false).onComplete(promise);
   }
 
   private void cleanSubs(String id) {

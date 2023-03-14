@@ -43,7 +43,7 @@ public class IgniteDiscoveryImplClusteredTest extends DiscoveryImplTestBase {
     System.setProperty("IGNITE_HOME", temporaryFolder.newFolder().getAbsolutePath());
     VertxOptions options = new VertxOptions()
       .setClusterManager(new IgniteClusterManager());
-    Vertx.clusteredVertx(options, ar -> {
+    Vertx.clusteredVertx(options).onComplete(ar -> {
       vertx = ar.result();
     });
     await().until(() -> vertx != null);
