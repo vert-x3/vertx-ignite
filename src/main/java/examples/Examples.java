@@ -22,7 +22,7 @@ public class Examples {
     ClusterManager clusterManager = new IgniteClusterManager();
 
     VertxOptions options = new VertxOptions().setClusterManager(clusterManager);
-    Vertx.clusteredVertx(options, res -> {
+    Vertx.clusteredVertx(options).onComplete(res -> {
       if (res.succeeded()) {
         Vertx vertx = res.result();
       } else {
@@ -38,7 +38,7 @@ public class Examples {
     ClusterManager clusterManager = new IgniteClusterManager(cfg);
 
     VertxOptions options = new VertxOptions().setClusterManager(clusterManager);
-    Vertx.clusteredVertx(options, res -> {
+    Vertx.clusteredVertx(options).onComplete(res -> {
       if (res.succeeded()) {
         Vertx vertx = res.result();
       } else {
@@ -53,7 +53,7 @@ public class Examples {
     ClusterManager clusterManager = new IgniteClusterManager(ignite);
 
     VertxOptions options = new VertxOptions().setClusterManager(clusterManager);
-    Vertx.clusteredVertx(options, res -> {
+    Vertx.clusteredVertx(options).onComplete(res -> {
       if (res.succeeded()) {
         Vertx vertx = res.result();
       } else {
@@ -86,7 +86,7 @@ public class Examples {
       .setClusterManager(new IgniteClusterManager(igniteOptions))
       .setEventBusOptions(eventBusOptions);
 
-    Vertx.clusteredVertx(options, res -> {
+    Vertx.clusteredVertx(options).onComplete(res -> {
       if (res.succeeded()) {
         Vertx vertx = res.result();
       } else {
