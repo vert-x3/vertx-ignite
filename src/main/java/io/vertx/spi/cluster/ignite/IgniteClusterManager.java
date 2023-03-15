@@ -523,20 +523,8 @@ public class IgniteClusterManager implements ClusterManager {
     }
 
     @Override
-    public void get(Handler<AsyncResult<Long>> handler) {
-      Objects.requireNonNull(handler, "handler");
-      get().onComplete(handler);
-    }
-
-    @Override
     public Future<Long> incrementAndGet() {
       return vertx.executeBlocking(fut -> fut.complete(cnt.incrementAndGet()));
-    }
-
-    @Override
-    public void incrementAndGet(Handler<AsyncResult<Long>> handler) {
-      Objects.requireNonNull(handler, "handler");
-      incrementAndGet().onComplete(handler);
     }
 
     @Override
@@ -545,20 +533,8 @@ public class IgniteClusterManager implements ClusterManager {
     }
 
     @Override
-    public void getAndIncrement(Handler<AsyncResult<Long>> handler) {
-      Objects.requireNonNull(handler, "handler");
-      getAndIncrement().onComplete(handler);
-    }
-
-    @Override
     public Future<Long> decrementAndGet() {
       return vertx.executeBlocking(fut -> fut.complete(cnt.decrementAndGet()));
-    }
-
-    @Override
-    public void decrementAndGet(Handler<AsyncResult<Long>> handler) {
-      Objects.requireNonNull(handler, "handler");
-      decrementAndGet().onComplete(handler);
     }
 
     @Override
@@ -567,31 +543,13 @@ public class IgniteClusterManager implements ClusterManager {
     }
 
     @Override
-    public void addAndGet(long value, Handler<AsyncResult<Long>> handler) {
-      Objects.requireNonNull(handler, "handler");
-      addAndGet(value).onComplete(handler);
-    }
-
-    @Override
     public Future<Long> getAndAdd(long value) {
       return vertx.executeBlocking(fut -> fut.complete(cnt.getAndAdd(value)));
     }
 
     @Override
-    public void getAndAdd(long value, Handler<AsyncResult<Long>> handler) {
-      Objects.requireNonNull(handler, "handler");
-      getAndAdd(value).onComplete(handler);
-    }
-
-    @Override
     public Future<Boolean> compareAndSet(long expected, long value) {
       return vertx.executeBlocking(fut -> fut.complete(cnt.compareAndSet(expected, value)));
-    }
-
-    @Override
-    public void compareAndSet(long expected, long value, Handler<AsyncResult<Boolean>> handler) {
-      Objects.requireNonNull(handler, "handler");
-      compareAndSet(expected, value).onComplete(handler);
     }
   }
 }
