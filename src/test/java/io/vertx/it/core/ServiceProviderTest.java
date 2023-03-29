@@ -42,7 +42,7 @@ public class ServiceProviderTest {
       } else {
         result.completeExceptionally(new Exception());
       }
-    }).completion().onComplete(ar -> {
+    }).completionHandler(ar -> {
       if (ar.succeeded()) {
         v2.eventBus().send("the-address", "ping");
       } else {
