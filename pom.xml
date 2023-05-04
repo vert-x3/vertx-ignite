@@ -15,7 +15,7 @@
 
   <properties>
     <stack.version>4.4.1-SNAPSHOT</stack.version>
-    <ignite.version>2.14.0</ignite.version>
+    <ignite.version>2.15.0</ignite.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
     <jar.manifest>${project.basedir}/src/main/resources/META-INF/MANIFEST.MF</jar.manifest>
   </properties>
