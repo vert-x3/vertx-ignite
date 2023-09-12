@@ -9,12 +9,12 @@
   </parent>
 
   <artifactId>vertx-ignite</artifactId>
-  <version>4.4.6-SNAPSHOT</version>
+  <version>4.5.0-SNAPSHOT</version>
 
   <name>Vert.x Ignite Cluster Manager</name>
 
   <properties>
-    <stack.version>4.4.6-SNAPSHOT</stack.version>
+    <stack.version>4.5.0-SNAPSHOT</stack.version>
     <ignite.version>2.15.0</ignite.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
     <jar.manifest>${project.basedir}/src/main/resources/META-INF/MANIFEST.MF</jar.manifest>
