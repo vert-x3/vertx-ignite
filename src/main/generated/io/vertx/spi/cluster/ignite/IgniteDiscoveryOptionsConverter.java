@@ -20,14 +20,14 @@ public class IgniteDiscoveryOptionsConverter {
   public static void fromJson(Iterable<java.util.Map.Entry<String, Object>> json, IgniteDiscoveryOptions obj) {
     for (java.util.Map.Entry<String, Object> member : json) {
       switch (member.getKey()) {
-        case "properties":
-          if (member.getValue() instanceof JsonObject) {
-            obj.setProperties(((JsonObject)member.getValue()).copy());
-          }
-          break;
         case "type":
           if (member.getValue() instanceof String) {
             obj.setType((String)member.getValue());
+          }
+          break;
+        case "properties":
+          if (member.getValue() instanceof JsonObject) {
+            obj.setProperties(((JsonObject)member.getValue()).copy());
           }
           break;
       }
@@ -39,11 +39,11 @@ public class IgniteDiscoveryOptionsConverter {
   }
 
   public static void toJson(IgniteDiscoveryOptions obj, java.util.Map<String, Object> json) {
-    if (obj.getProperties() != null) {
-      json.put("properties", obj.getProperties());
-    }
     if (obj.getType() != null) {
       json.put("type", obj.getType());
+    }
+    if (obj.getProperties() != null) {
+      json.put("properties", obj.getProperties());
     }
   }
 }

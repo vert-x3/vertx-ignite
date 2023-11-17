@@ -79,8 +79,8 @@ public class Examples {
     EventBusOptions eventBusOptions = new EventBusOptions()
       .setSsl(true)
       .setClientAuth(ClientAuth.REQUIRED)
-      .setPemKeyCertOptions(pemKeyCert)
-      .setPemTrustOptions(pemTrust);
+      .setKeyCertOptions(pemKeyCert)
+      .setTrustOptions(pemTrust);
 
     VertxOptions options = new VertxOptions()
       .setClusterManager(new IgniteClusterManager(igniteOptions))

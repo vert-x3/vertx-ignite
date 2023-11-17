@@ -20,9 +20,14 @@ public class IgniteCacheOptionsConverter {
   public static void fromJson(Iterable<java.util.Map.Entry<String, Object>> json, IgniteCacheOptions obj) {
     for (java.util.Map.Entry<String, Object> member : json) {
       switch (member.getKey()) {
-        case "atomicityMode":
+        case "name":
           if (member.getValue() instanceof String) {
-            obj.setAtomicityMode((String)member.getValue());
+            obj.setName((String)member.getValue());
+          }
+          break;
+        case "cacheMode":
+          if (member.getValue() instanceof String) {
+            obj.setCacheMode((String)member.getValue());
           }
           break;
         case "backups":
@@ -30,9 +35,19 @@ public class IgniteCacheOptionsConverter {
             obj.setBackups(((Number)member.getValue()).intValue());
           }
           break;
-        case "cacheMode":
+        case "readFromBackup":
+          if (member.getValue() instanceof Boolean) {
+            obj.setReadFromBackup((Boolean)member.getValue());
+          }
+          break;
+        case "atomicityMode":
           if (member.getValue() instanceof String) {
-            obj.setCacheMode((String)member.getValue());
+            obj.setAtomicityMode((String)member.getValue());
+          }
+          break;
+        case "writeSynchronizationMode":
+          if (member.getValue() instanceof String) {
+            obj.setWriteSynchronizationMode((String)member.getValue());
           }
           break;
         case "copyOnRead":
@@ -50,16 +65,6 @@ public class IgniteCacheOptionsConverter {
             obj.setEncryptionEnabled((Boolean)member.getValue());
           }
           break;
-        case "eventsDisabled":
-          if (member.getValue() instanceof Boolean) {
-            obj.setEventsDisabled((Boolean)member.getValue());
-          }
-          break;
-        case "expiryPolicy":
-          if (member.getValue() instanceof JsonObject) {
-            obj.setExpiryPolicy(((JsonObject)member.getValue()).copy());
-          }
-          break;
         case "groupName":
           if (member.getValue() instanceof String) {
             obj.setGroupName((String)member.getValue());
@@ -75,21 +80,6 @@ public class IgniteCacheOptionsConverter {
             obj.setMaxConcurrentAsyncOperations(((Number)member.getValue()).intValue());
           }
           break;
-        case "maxQueryInteratorsCount":
-          if (member.getValue() instanceof Number) {
-            obj.setMaxQueryInteratorsCount(((Number)member.getValue()).intValue());
-          }
-          break;
-        case "metricsEnabled":
-          if (member.getValue() instanceof Boolean) {
-            obj.setMetricsEnabled((Boolean)member.getValue());
-          }
-          break;
-        case "name":
-          if (member.getValue() instanceof String) {
-            obj.setName((String)member.getValue());
-          }
-          break;
         case "onheapCacheEnabled":
           if (member.getValue() instanceof Boolean) {
             obj.setOnheapCacheEnabled((Boolean)member.getValue());
@@ -98,16 +88,6 @@ public class IgniteCacheOptionsConverter {
         case "partitionLossPolicy":
           if (member.getValue() instanceof String) {
             obj.setPartitionLossPolicy((String)member.getValue());
-          }
-          break;
-        case "readFromBackup":
-          if (member.getValue() instanceof Boolean) {
-            obj.setReadFromBackup((Boolean)member.getValue());
-          }
-          break;
-        case "rebalanceDelay":
-          if (member.getValue() instanceof Number) {
-            obj.setRebalanceDelay(((Number)member.getValue()).longValue());
           }
           break;
         case "rebalanceMode":
@@ -120,9 +100,29 @@ public class IgniteCacheOptionsConverter {
             obj.setRebalanceOrder(((Number)member.getValue()).intValue());
           }
           break;
-        case "writeSynchronizationMode":
-          if (member.getValue() instanceof String) {
-            obj.setWriteSynchronizationMode((String)member.getValue());
+        case "rebalanceDelay":
+          if (member.getValue() instanceof Number) {
+            obj.setRebalanceDelay(((Number)member.getValue()).longValue());
+          }
+          break;
+        case "maxQueryInteratorsCount":
+          if (member.getValue() instanceof Number) {
+            obj.setMaxQueryInteratorsCount(((Number)member.getValue()).intValue());
+          }
+          break;
+        case "eventsDisabled":
+          if (member.getValue() instanceof Boolean) {
+            obj.setEventsDisabled((Boolean)member.getValue());
+          }
+          break;
+        case "expiryPolicy":
+          if (member.getValue() instanceof JsonObject) {
+            obj.setExpiryPolicy(((JsonObject)member.getValue()).copy());
+          }
+          break;
+        case "metricsEnabled":
+          if (member.getValue() instanceof Boolean) {
+            obj.setMetricsEnabled((Boolean)member.getValue());
           }
           break;
       }
@@ -134,42 +134,42 @@ public class IgniteCacheOptionsConverter {
   }
 
   public static void toJson(IgniteCacheOptions obj, java.util.Map<String, Object> json) {
+    if (obj.getName() != null) {
+      json.put("name", obj.getName());
+    }
+    if (obj.getCacheMode() != null) {
+      json.put("cacheMode", obj.getCacheMode());
+    }
+    json.put("backups", obj.getBackups());
+    json.put("readFromBackup", obj.isReadFromBackup());
     if (obj.getAtomicityMode() != null) {
       json.put("atomicityMode", obj.getAtomicityMode());
     }
-    json.put("backups", obj.getBackups());
-    if (obj.getCacheMode() != null) {
-      json.put("cacheMode", obj.getCacheMode());
+    if (obj.getWriteSynchronizationMode() != null) {
+      json.put("writeSynchronizationMode", obj.getWriteSynchronizationMode());
     }
     json.put("copyOnRead", obj.isCopyOnRead());
     json.put("eagerTtl", obj.isEagerTtl());
     json.put("encryptionEnabled", obj.isEncryptionEnabled());
-    json.put("eventsDisabled", obj.isEventsDisabled());
-    if (obj.getExpiryPolicy() != null) {
-      json.put("expiryPolicy", obj.getExpiryPolicy());
-    }
     if (obj.getGroupName() != null) {
       json.put("groupName", obj.getGroupName());
     }
     json.put("invalidate", obj.isInvalidate());
     json.put("maxConcurrentAsyncOperations", obj.getMaxConcurrentAsyncOperations());
-    json.put("maxQueryInteratorsCount", obj.getMaxQueryInteratorsCount());
-    json.put("metricsEnabled", obj.isMetricsEnabled());
-    if (obj.getName() != null) {
-      json.put("name", obj.getName());
-    }
     json.put("onheapCacheEnabled", obj.isOnheapCacheEnabled());
     if (obj.getPartitionLossPolicy() != null) {
       json.put("partitionLossPolicy", obj.getPartitionLossPolicy());
     }
-    json.put("readFromBackup", obj.isReadFromBackup());
-    json.put("rebalanceDelay", obj.getRebalanceDelay());
     if (obj.getRebalanceMode() != null) {
       json.put("rebalanceMode", obj.getRebalanceMode());
     }
     json.put("rebalanceOrder", obj.getRebalanceOrder());
-    if (obj.getWriteSynchronizationMode() != null) {
-      json.put("writeSynchronizationMode", obj.getWriteSynchronizationMode());
+    json.put("rebalanceDelay", obj.getRebalanceDelay());
+    json.put("maxQueryInteratorsCount", obj.getMaxQueryInteratorsCount());
+    json.put("eventsDisabled", obj.isEventsDisabled());
+    if (obj.getExpiryPolicy() != null) {
+      json.put("expiryPolicy", obj.getExpiryPolicy());
     }
+    json.put("metricsEnabled", obj.isMetricsEnabled());
   }
 }
