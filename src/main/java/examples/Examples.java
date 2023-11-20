@@ -21,8 +21,7 @@ public class Examples {
   public void example1() {
     ClusterManager clusterManager = new IgniteClusterManager();
 
-    VertxOptions options = new VertxOptions().setClusterManager(clusterManager);
-    Vertx.clusteredVertx(options).onComplete(res -> {
+    Vertx.builder().withClusterManager(clusterManager).buildClustered().onComplete(res -> {
       if (res.succeeded()) {
         Vertx vertx = res.result();
       } else {
@@ -37,8 +36,7 @@ public class Examples {
 
     ClusterManager clusterManager = new IgniteClusterManager(cfg);
 
-    VertxOptions options = new VertxOptions().setClusterManager(clusterManager);
-    Vertx.clusteredVertx(options).onComplete(res -> {
+    Vertx.builder().withClusterManager(clusterManager).buildClustered().onComplete(res -> {
       if (res.succeeded()) {
         Vertx vertx = res.result();
       } else {
@@ -52,8 +50,7 @@ public class Examples {
 
     ClusterManager clusterManager = new IgniteClusterManager(ignite);
 
-    VertxOptions options = new VertxOptions().setClusterManager(clusterManager);
-    Vertx.clusteredVertx(options).onComplete(res -> {
+    Vertx.builder().withClusterManager(clusterManager).buildClustered().onComplete(res -> {
       if (res.succeeded()) {
         Vertx vertx = res.result();
       } else {
@@ -83,10 +80,12 @@ public class Examples {
       .setPemTrustOptions(pemTrust);
 
     VertxOptions options = new VertxOptions()
-      .setClusterManager(new IgniteClusterManager(igniteOptions))
       .setEventBusOptions(eventBusOptions);
 
-    Vertx.clusteredVertx(options).onComplete(res -> {
+    Vertx.builder()
+      .with(options)
+      .withClusterManager(new IgniteClusterManager(igniteOptions))
+      .buildClustered().onComplete(res -> {
       if (res.succeeded()) {
         Vertx vertx = res.result();
       } else {
