@@ -23,7 +23,8 @@ import org.apache.ignite.spi.discovery.DiscoverySpi;
 /**
  * @author Lukas Prettenthaler
  */
-@DataObject(generateConverter = true)
+@DataObject
+@JsonGen(publicConverter = false)
 public class IgniteDiscoveryOptions {
   private String type;
   private JsonObject properties;

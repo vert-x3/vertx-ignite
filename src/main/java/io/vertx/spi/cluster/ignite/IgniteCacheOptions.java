@@ -25,7 +25,8 @@ import static org.apache.ignite.configuration.CacheConfiguration.*;
 /**
  * @author Lukas Prettenthaler
  */
-@DataObject(generateConverter = true)
+@DataObject
+@JsonGen(publicConverter = false)
 public class IgniteCacheOptions {
   private String name;
   private CacheMode cacheMode;

@@ -28,7 +28,8 @@ import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.*;
 /**
  * @author Lukas Prettenthaler
  */
-@DataObject(generateConverter = true)
+@DataObject
+@JsonGen(publicConverter = false)
 public class IgniteOptions {
   private String localHost;
   private int localPort;

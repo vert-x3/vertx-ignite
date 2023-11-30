@@ -24,7 +24,8 @@ import static org.apache.ignite.ssl.SslContextFactory.*;
 /**
  * @author Lukas Prettenthaler
  */
-@DataObject(generateConverter = true)
+@DataObject
+@JsonGen(publicConverter = false)
 public class IgniteSslOptions {
   private String protocol;
   private String keyAlgorithm;
