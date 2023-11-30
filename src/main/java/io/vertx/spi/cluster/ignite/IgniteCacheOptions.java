@@ -16,6 +16,7 @@
 package io.vertx.spi.cluster.ignite;
 
 import io.vertx.codegen.annotations.DataObject;
+import io.vertx.codegen.json.annotations.JsonGen;
 import io.vertx.core.json.JsonObject;
 import org.apache.ignite.cache.*;
 
@@ -25,7 +26,8 @@ import static org.apache.ignite.configuration.CacheConfiguration.*;
 /**
  * @author Lukas Prettenthaler
  */
-@DataObject(generateConverter = true)
+@DataObject
+@JsonGen(publicConverter = false)
 public class IgniteCacheOptions {
   private String name;
   private CacheMode cacheMode;

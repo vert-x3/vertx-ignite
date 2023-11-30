@@ -16,6 +16,7 @@
 package io.vertx.spi.cluster.ignite;
 
 import io.vertx.codegen.annotations.DataObject;
+import io.vertx.codegen.json.annotations.JsonGen;
 import io.vertx.core.json.JsonObject;
 
 import java.util.ArrayList;
@@ -28,7 +29,8 @@ import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.*;
 /**
  * @author Lukas Prettenthaler
  */
-@DataObject(generateConverter = true)
+@DataObject
+@JsonGen(publicConverter = false)
 public class IgniteOptions {
   private String localHost;
   private int localPort;

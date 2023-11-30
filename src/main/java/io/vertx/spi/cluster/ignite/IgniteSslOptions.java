@@ -16,6 +16,7 @@
 package io.vertx.spi.cluster.ignite;
 
 import io.vertx.codegen.annotations.DataObject;
+import io.vertx.codegen.json.annotations.JsonGen;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.*;
 
@@ -24,7 +25,8 @@ import static org.apache.ignite.ssl.SslContextFactory.*;
 /**
  * @author Lukas Prettenthaler
  */
-@DataObject(generateConverter = true)
+@DataObject
+@JsonGen(publicConverter = false)
 public class IgniteSslOptions {
   private String protocol;
   private String keyAlgorithm;

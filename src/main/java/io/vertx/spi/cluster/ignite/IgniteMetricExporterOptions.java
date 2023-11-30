@@ -17,13 +17,15 @@ package io.vertx.spi.cluster.ignite;
 
 import io.vertx.codegen.annotations.DataObject;
 import io.vertx.codegen.annotations.GenIgnore;
+import io.vertx.codegen.json.annotations.JsonGen;
 import io.vertx.core.json.JsonObject;
 import org.apache.ignite.spi.metric.MetricExporterSpi;
 
 /**
  * @author Markus Spika
  */
-@DataObject(generateConverter = true)
+@DataObject
+@JsonGen(publicConverter = false)
 public class IgniteMetricExporterOptions {
 
   private MetricExporterSpi customSpi;
