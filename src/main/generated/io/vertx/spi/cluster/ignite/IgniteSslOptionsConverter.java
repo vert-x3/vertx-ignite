@@ -17,7 +17,7 @@ public class IgniteSslOptionsConverter {
   private static final Base64.Decoder BASE64_DECODER = JsonUtil.BASE64_DECODER;
   private static final Base64.Encoder BASE64_ENCODER = JsonUtil.BASE64_ENCODER;
 
-  public static void fromJson(Iterable<java.util.Map.Entry<String, Object>> json, IgniteSslOptions obj) {
+   static void fromJson(Iterable<java.util.Map.Entry<String, Object>> json, IgniteSslOptions obj) {
     for (java.util.Map.Entry<String, Object> member : json) {
       switch (member.getKey()) {
         case "jksKeyCertOptions":
@@ -99,11 +99,11 @@ public class IgniteSslOptionsConverter {
     }
   }
 
-  public static void toJson(IgniteSslOptions obj, JsonObject json) {
+   static void toJson(IgniteSslOptions obj, JsonObject json) {
     toJson(obj, json.getMap());
   }
 
-  public static void toJson(IgniteSslOptions obj, java.util.Map<String, Object> json) {
+   static void toJson(IgniteSslOptions obj, java.util.Map<String, Object> json) {
     if (obj.getJksKeyCertOptions() != null) {
       json.put("jksKeyCertOptions", obj.getJksKeyCertOptions().toJson());
     }

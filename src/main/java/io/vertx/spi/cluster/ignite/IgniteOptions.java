@@ -16,6 +16,7 @@
 package io.vertx.spi.cluster.ignite;
 
 import io.vertx.codegen.annotations.DataObject;
+import io.vertx.codegen.annotations.JsonGen;
 import io.vertx.core.json.JsonObject;
 
 import java.util.ArrayList;

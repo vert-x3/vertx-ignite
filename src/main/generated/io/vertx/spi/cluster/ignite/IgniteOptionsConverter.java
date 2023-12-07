@@ -17,7 +17,7 @@ public class IgniteOptionsConverter {
   private static final Base64.Decoder BASE64_DECODER = JsonUtil.BASE64_DECODER;
   private static final Base64.Encoder BASE64_ENCODER = JsonUtil.BASE64_ENCODER;
 
-  public static void fromJson(Iterable<java.util.Map.Entry<String, Object>> json, IgniteOptions obj) {
+   static void fromJson(Iterable<java.util.Map.Entry<String, Object>> json, IgniteOptions obj) {
     for (java.util.Map.Entry<String, Object> member : json) {
       switch (member.getKey()) {
         case "cacheConfiguration":
@@ -144,11 +144,11 @@ public class IgniteOptionsConverter {
     }
   }
 
-  public static void toJson(IgniteOptions obj, JsonObject json) {
+   static void toJson(IgniteOptions obj, JsonObject json) {
     toJson(obj, json.getMap());
   }
 
-  public static void toJson(IgniteOptions obj, java.util.Map<String, Object> json) {
+   static void toJson(IgniteOptions obj, java.util.Map<String, Object> json) {
     if (obj.getCacheConfiguration() != null) {
       JsonArray array = new JsonArray();
       obj.getCacheConfiguration().forEach(item -> array.add(item.toJson()));
