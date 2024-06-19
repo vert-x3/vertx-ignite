@@ -17,7 +17,7 @@
 package io.vertx.spi.cluster.ignite.impl;
 
 import io.vertx.core.Promise;
-import io.vertx.core.impl.VertxInternal;
+import io.vertx.core.internal.VertxInternal;
 import io.vertx.test.core.VertxTestBase;
 import org.junit.Test;
 

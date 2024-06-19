@@ -2,11 +2,9 @@ package io.vertx.spi.cluster.ignite;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxException;
-import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.json.JsonObject;
 import io.vertx.spi.cluster.ignite.util.ConfigHelper;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.lifecycle.LifecycleEventType;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
@@ -15,8 +13,6 @@ import org.apache.ignite.spi.metric.noop.NoopMetricExporterSpi;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import static org.apache.ignite.configuration.DataStorageConfiguration.*;
 import static org.apache.ignite.configuration.IgniteConfiguration.*;
