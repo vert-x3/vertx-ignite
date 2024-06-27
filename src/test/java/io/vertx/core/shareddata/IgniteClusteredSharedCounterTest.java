@@ -30,7 +30,7 @@ import java.util.List;
 /**
  * @author Andrey Gura
  */
-public class IgniteClusteredSharedCounterTest extends ClusteredSharedCounterTest {
+public class IgniteClusteredSharedCounterTest extends io.vertx.tests.shareddata.ClusteredSharedCounterTest {
 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();

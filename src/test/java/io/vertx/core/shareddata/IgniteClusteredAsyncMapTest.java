@@ -30,7 +30,7 @@ import java.util.List;
 /**
  * @author Andrey Gura
  */
-public class IgniteClusteredAsyncMapTest extends ClusteredAsyncMapTest {
+public class IgniteClusteredAsyncMapTest extends io.vertx.tests.shareddata.ClusteredAsyncMapTest {
 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();

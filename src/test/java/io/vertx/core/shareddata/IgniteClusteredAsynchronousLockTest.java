@@ -31,7 +31,7 @@ import java.util.List;
 /**
  * @author Andrey Gura
  */
-public class IgniteClusteredAsynchronousLockTest extends ClusteredAsynchronousLockTest {
+public class IgniteClusteredAsynchronousLockTest extends io.vertx.tests.shareddata.ClusteredAsynchronousLockTest {
 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();

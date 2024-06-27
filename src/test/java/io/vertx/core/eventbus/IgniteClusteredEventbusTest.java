@@ -30,7 +30,7 @@ import java.util.List;
 /**
  * @author Andrey Gura
  */
-public class IgniteClusteredEventbusTest extends ClusteredEventBusTest {
+public class IgniteClusteredEventbusTest extends io.vertx.tests.eventbus.ClusteredEventBusTest {
 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();

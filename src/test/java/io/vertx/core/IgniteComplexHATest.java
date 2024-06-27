@@ -31,7 +31,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 /**
  * @author Andrey Gura
  */
-public class IgniteComplexHATest extends ComplexHATest {
+public class IgniteComplexHATest extends io.vertx.tests.ha.ComplexHATest {
 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();

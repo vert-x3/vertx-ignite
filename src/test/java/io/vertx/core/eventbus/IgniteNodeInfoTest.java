@@ -30,7 +30,7 @@ import java.util.List;
 /**
  * @author Thomas Segismont
  */
-public class IgniteNodeInfoTest extends NodeInfoTest {
+public class IgniteNodeInfoTest extends io.vertx.tests.eventbus.NodeInfoTest {
 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();

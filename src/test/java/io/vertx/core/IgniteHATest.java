@@ -29,7 +29,7 @@ import java.util.List;
 /**
  * @author Andrey Gura
  */
-public class IgniteHATest extends HATest {
+public class IgniteHATest extends io.vertx.tests.ha.HATest {
 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();

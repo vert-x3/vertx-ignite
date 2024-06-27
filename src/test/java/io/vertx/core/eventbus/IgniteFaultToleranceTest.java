@@ -28,7 +28,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 /**
  * @author Andrey Gura
  */
-public class IgniteFaultToleranceTest extends FaultToleranceTest {
+public class IgniteFaultToleranceTest extends io.vertx.tests.eventbus.FaultToleranceTest {
 
   @Override
   protected ClusterManager getClusterManager() {
