@@ -13,8 +13,13 @@
 
   <name>Vert.x Ignite Cluster Manager</name>
 
+  <scm>
+    <connection>scm:git:git@github.com:vert-x3/vertx-ignite.git</connection>
+    <developerConnection>scm:git:git@github.com:vert-x3/vertx-ignite.git</developerConnection>
+    <url>git@github.com:vert-x3/vertx-ignite.git</url>
+  </scm>
+
   <properties>
-    <stack.version>5.0.0-SNAPSHOT</stack.version>
     <ignite.version>2.16.0</ignite.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
     <jar.manifest>${project.basedir}/src/main/resources/META-INF/MANIFEST.MF</jar.manifest>
@@ -25,7 +30,7 @@
       <dependency>
         <groupId>io.vertx</groupId>
         <artifactId>vertx-dependencies</artifactId>
-        <version>${stack.version}</version>
+        <version>${project.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
