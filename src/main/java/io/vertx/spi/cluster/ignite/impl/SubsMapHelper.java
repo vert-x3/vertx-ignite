@@ -19,6 +19,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.VertxException;
 import io.vertx.core.impl.VertxInternal;
+import io.vertx.core.impl.logging.Logger;
+import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.spi.cluster.NodeSelector;
 import io.vertx.core.spi.cluster.RegistrationInfo;
 import io.vertx.core.spi.cluster.RegistrationUpdateEvent;
@@ -43,6 +45,8 @@ import static java.util.stream.Collectors.toList;
  * @author Lukas Prettenthaler
  */
 public class SubsMapHelper {
+  private static final Logger log = LoggerFactory.getLogger(SubsMapHelper.class);
+
   private final IgniteCache<IgniteRegistrationInfo, Boolean> map;
   private final NodeSelector nodeSelector;
   private final ConcurrentMap<String, Set<RegistrationInfo>> localSubs = new ConcurrentHashMap<>();
@@ -123,7 +127,7 @@ public class SubsMapHelper {
         localSubs.computeIfPresent(address, (add, curr) -> removeFromSet(registrationInfo, curr));
         fireRegistrationUpdateEvent(address);
       } else {
-        map.remove(new IgniteRegistrationInfo(address, registrationInfo));
+        map.remove(new IgniteRegistrationInfo(address, registrationInfo), Boolean.TRUE);
       }
     } catch (IllegalStateException | CacheException e) {
       throw new VertxException(e);
@@ -141,10 +145,12 @@ public class SubsMapHelper {
       .getAll().stream()
       .map(Cache.Entry::getKey)
       .collect(Collectors.toCollection(TreeSet::new));
-    try {
-      map.removeAll(toRemove);
-    } catch (IllegalStateException | CacheException t) {
-      //ignore
+    for (IgniteRegistrationInfo info : toRemove) {
+      try {
+        map.remove(info, Boolean.TRUE);
+      } catch (IllegalStateException | CacheException t) {
+        log.warn("Could not remove subscriber: " + t.getMessage());
+      }
     }
   }
 

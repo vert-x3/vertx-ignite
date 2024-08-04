@@ -401,18 +401,14 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   private void cleanSubs(String id) {
-    try {
-      subsMapHelper.removeAllForNode(id);
-    } catch (IllegalStateException | CacheException e) {
-      //ignore
-    }
+    subsMapHelper.removeAllForNode(id);
   }
 
   private boolean cleanNodeInfos(String nid) {
     try {
       return nodeInfoMap.remove(nid);
     } catch (IllegalStateException | CacheException e) {
-      //ignore
+      log.warn("Could not remove nodeInfo (" + nid + "): " + e.getMessage());
     }
     return false;
   }

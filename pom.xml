@@ -104,7 +104,7 @@
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>1.2.11</version>
+      <version>1.4.12</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -162,14 +162,44 @@
             </argLine>
             <forkCount>1</forkCount>
             <reuseForks>true</reuseForks>
-            <excludes>
-              <exclude>**/it/**/*Test.java</exclude>
-            </excludes>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>2.19.1</version>
+          <configuration>
+            <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+            <systemPropertyVariables>
+              <java.net.preferIPv4Stack>true</java.net.preferIPv4Stack>
+              <IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED>true</IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED>
+              <IGNITE_NO_ASCII>true</IGNITE_NO_ASCII>
+              <IGNITE_UPDATE_NOTIFIER>false</IGNITE_UPDATE_NOTIFIER>
+              <IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE>1000</IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE>
+              <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.SLF4JLogDelegateFactory</vertx.logger-delegate-factory-class-name>
+              <io.netty.leakDetectionLevel>PARANOID</io.netty.leakDetectionLevel>
+              <buildDirectory>${project.build.directory}</buildDirectory>
+              <vertxVersion>${project.version}</vertxVersion>
+            </systemPropertyVariables>
+            <argLine>
+              <!-- Needs to be small enough to run in a EC2 1.7GB small instance -->
+              -Xms512M -Xmx1200M
+            </argLine>
+            <forkCount>1</forkCount>
+            <reuseForks>true</reuseForks>
           </configuration>
         </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>**/it/**/*Test.java</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
       <plugin>
         <artifactId>maven-failsafe-plugin</artifactId>
         <executions>
@@ -204,6 +234,21 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <argLine>
+                <!-- Needs to be small enough to run in a EC2 1.7GB small instance -->
+                -Xms512M -Xmx1200M
+                <!-- setup for JDK 17+ to replace illegal-access -->
+                --add-opens=java.base/java.nio=ALL-UNNAMED
+                --add-opens=java.base/java.util=ALL-UNNAMED
+                --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
+                --add-opens=java.base/java.lang=ALL-UNNAMED
+              </argLine>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
             <configuration>
               <argLine>
                 <!-- Needs to be small enough to run in a EC2 1.7GB small instance -->
