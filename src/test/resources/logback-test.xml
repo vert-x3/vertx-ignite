@@ -22,6 +22,7 @@
     </encoder>
   </appender>
   <logger name="org.apache.ignite.IgniteLogger" level="ERROR"/>
+  <logger name="io.vertx.core.eventbus.impl.clustered.ConnectionHolder" level="ERROR"/>
   <root level="${testLogLevel:-INFO}">
     <appender-ref ref="STDOUT"/>
   </root>
