@@ -50,7 +50,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -270,8 +269,15 @@ public class IgniteClusterManager implements ClusterManager {
   @Override
   public List<String> getNodes() {
     try {
-      return ignite.cluster().nodes().stream()
-        .map(IgniteClusterManager::nodeId).collect(Collectors.toList());
+      Collection<ClusterNode> nodes = ignite.cluster().nodes();
+      List<String> nodeIds;
+      synchronized (nodes) {
+        nodeIds = new ArrayList<>(nodes.size());
+        for (ClusterNode node : nodes) {
+          nodeIds.add(nodeId(node));
+        }
+      }
+      return nodeIds;
     } catch (IllegalStateException e) {
       log.debug(e.getMessage());
       return Collections.emptyList();
