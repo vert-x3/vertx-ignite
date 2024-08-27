@@ -35,10 +35,7 @@ import javax.cache.event.CacheEntryEvent;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-
-import static java.util.stream.Collectors.toList;
 
 /**
  * @author Thomas Segismont
@@ -70,12 +67,11 @@ public class SubsMapHelper {
       return null;
     }
     try {
-      List<RegistrationInfo> infos = map.query(new ScanQuery<IgniteRegistrationInfo, Boolean>((k, v) -> k.address().equals(address)))
-        .getAll().stream()
-        .map(Cache.Entry::getKey)
-        .map(IgniteRegistrationInfo::registrationInfo)
-        .collect(toList());
-      int size = infos.size();
+      List<Cache.Entry<IgniteRegistrationInfo, Boolean>> remote = map
+        .query(new ScanQuery<IgniteRegistrationInfo, Boolean>((k, v) -> k.address().equals(address)))
+        .getAll();
+      List<RegistrationInfo> infos;
+      int size = remote.size();
       Set<RegistrationInfo> local = localSubs.get(address);
       if (local != null) {
         synchronized (local) {
@@ -83,12 +79,17 @@ public class SubsMapHelper {
           if (size == 0) {
             return Collections.emptyList();
           }
+          infos = new ArrayList<>(size);
           infos.addAll(local);
         }
       } else if (size == 0) {
         return Collections.emptyList();
+      } else {
+        infos = new ArrayList<>(size);
       }
-
+      for (Cache.Entry<IgniteRegistrationInfo, Boolean> info : remote) {
+        infos.add(info.getKey().registrationInfo());
+      }
       return infos;
     } catch (IllegalStateException | CacheException e) {
       throw new VertxException(e);
@@ -141,13 +142,12 @@ public class SubsMapHelper {
   }
 
   public void removeAllForNode(String nodeId) {
-    TreeSet<IgniteRegistrationInfo> toRemove = map.query(new ScanQuery<IgniteRegistrationInfo, Boolean>((k, v) -> k.registrationInfo().nodeId().equals(nodeId)))
-      .getAll().stream()
-      .map(Cache.Entry::getKey)
-      .collect(Collectors.toCollection(TreeSet::new));
-    for (IgniteRegistrationInfo info : toRemove) {
+    List<Cache.Entry<IgniteRegistrationInfo, Boolean>> toRemove = map
+      .query(new ScanQuery<IgniteRegistrationInfo, Boolean>((k, v) -> k.registrationInfo().nodeId().equals(nodeId)))
+      .getAll();
+    for (Cache.Entry<IgniteRegistrationInfo, Boolean> info : toRemove) {
       try {
-        map.remove(info, Boolean.TRUE);
+        map.remove(info.getKey(), Boolean.TRUE);
       } catch (IllegalStateException | CacheException t) {
         log.warn("Could not remove subscriber: " + t.getMessage());
       }
