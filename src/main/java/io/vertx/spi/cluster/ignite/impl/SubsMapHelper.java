@@ -180,12 +180,12 @@ public class SubsMapHelper {
   }
 
   private void listen(final Iterable<CacheEntryEvent<? extends IgniteRegistrationInfo, ? extends Boolean>> events, final VertxInternal vertxInternal) {
-    vertxInternal.<List<RegistrationInfo>>executeBlocking(promise -> {
+    vertxInternal.<List<RegistrationInfo>>executeBlocking(() -> {
       StreamSupport.stream(events.spliterator(), false)
         .map(e -> e.getKey().address())
         .distinct()
         .forEach(this::fireRegistrationUpdateEvent);
-      promise.complete();
+      return null;
     });
   }
 }
