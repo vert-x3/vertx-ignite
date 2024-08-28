@@ -50,7 +50,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -197,7 +196,7 @@ public class IgniteClusterManager implements ClusterManager {
 
   @Override
   public <K, V> void getAsyncMap(String name, Promise<AsyncMap<K, V>> promise) {
-    vertx.<AsyncMap<K, V>>executeBlocking(prom -> prom.complete(new AsyncMapImpl<>(getCache(name), vertx))).onComplete(promise);
+    vertx.<AsyncMap<K, V>>executeBlocking(() -> new AsyncMapImpl<>(getCache(name), vertx)).onComplete(promise);
   }
 
   @Override
@@ -207,7 +206,7 @@ public class IgniteClusterManager implements ClusterManager {
 
   @Override
   public void getLockWithTimeout(String name, long timeout, Promise<Lock> promise) {
-    vertx.<Lock>executeBlocking(prom -> {
+    vertx.<Lock>executeBlocking(() -> {
       IgniteSemaphore semaphore = ignite.semaphore(LOCK_SEMAPHORE_PREFIX + name, 1, true, true);
       boolean locked;
       long remaining = timeout;
@@ -217,7 +216,7 @@ public class IgniteClusterManager implements ClusterManager {
         remaining = remaining - TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, NANOSECONDS);
       } while (!locked && remaining > 0);
       if (locked) {
-        prom.complete(new LockImpl(semaphore, lockReleaseExec));
+        return new LockImpl(semaphore, lockReleaseExec);
       } else {
         throw new VertxException("Timed out waiting to get lock " + name);
       }
@@ -226,7 +225,7 @@ public class IgniteClusterManager implements ClusterManager {
 
   @Override
   public void getCounter(String name, Promise<Counter> promise) {
-    vertx.<Counter>executeBlocking(prom -> prom.complete(new CounterImpl(ignite.atomicLong(name, 0, true)))).onComplete(promise);
+    vertx.<Counter>executeBlocking(() -> new CounterImpl(ignite.atomicLong(name, 0, true))).onComplete(promise);
   }
 
   @Override
@@ -240,9 +239,9 @@ public class IgniteClusterManager implements ClusterManager {
       this.nodeInfo = nodeInfo;
     }
     IgniteNodeInfo value = new IgniteNodeInfo(nodeInfo);
-    vertx.<Void>executeBlocking(prom -> {
+    vertx.<Void>executeBlocking(() -> {
       nodeInfoMap.put(nodeId, value);
-      prom.complete();
+      return null;
     }, false).onComplete(promise);
   }
 
@@ -270,8 +269,15 @@ public class IgniteClusterManager implements ClusterManager {
   @Override
   public List<String> getNodes() {
     try {
-      return ignite.cluster().nodes().stream()
-        .map(IgniteClusterManager::nodeId).collect(Collectors.toList());
+      Collection<ClusterNode> nodes = ignite.cluster().nodes();
+      List<String> nodeIds;
+      synchronized (nodes) {
+        nodeIds = new ArrayList<>(nodes.size());
+        for (ClusterNode node : nodes) {
+          nodeIds.add(nodeId(node));
+        }
+      }
+      return nodeIds;
     } catch (IllegalStateException e) {
       log.debug(e.getMessage());
       return Collections.emptyList();
@@ -280,7 +286,7 @@ public class IgniteClusterManager implements ClusterManager {
 
   @Override
   public void join(Promise<Void> promise) {
-    vertx.<Void>executeBlocking(prom -> {
+    vertx.<Void>executeBlocking(() -> {
       synchronized (monitor) {
         if (!active) {
           active = true;
@@ -303,14 +309,13 @@ public class IgniteClusterManager implements ClusterManager {
               return false;
             }
 
-            vertx.<Void>executeBlocking(f -> {
+            vertx.<Void>executeBlocking(() -> {
               String id = nodeId(((DiscoveryEvent) event).eventNode());
               switch (event.type()) {
                 case EVT_NODE_JOINED:
                   notifyNodeListener(listener -> listener.nodeAdded(id));
                   log.debug("node " + id + " joined the cluster");
-                  f.complete();
-                  break;
+                  return null;
                 case EVT_NODE_LEFT:
                 case EVT_NODE_FAILED:
                   if (cleanNodeInfos(id)) {
@@ -318,8 +323,7 @@ public class IgniteClusterManager implements ClusterManager {
                   }
                   notifyNodeListener(listener -> listener.nodeLeft(id));
                   log.debug("node " + id + " left the cluster");
-                  f.complete();
-                  break;
+                  return null;
                 case EVT_NODE_SEGMENTED:
                   if (customIgnite || !shutdownOnSegmentation) {
                     log.warn("node got segmented");
@@ -327,10 +331,9 @@ public class IgniteClusterManager implements ClusterManager {
                     log.warn("node got segmented and will be shut down");
                     vertx.close();
                   }
-                  f.fail(new IllegalStateException("node is stopped"));
-                  break;
+                  throw new IllegalStateException("node is stopped");
                 default:
-                  f.fail("event not known");
+                  throw new IllegalStateException("event not known");
               }
             });
 
@@ -343,18 +346,18 @@ public class IgniteClusterManager implements ClusterManager {
 
           try {
             MILLISECONDS.sleep(delayAfterStart);
-            prom.complete();
           } catch (InterruptedException e) {
-            prom.fail(e);
+            throw new IllegalStateException(e);
           }
         }
+        return null;
       }
     }).onComplete(promise);
   }
 
   @Override
   public void leave(Promise<Void> promise) {
-    vertx.<Void>executeBlocking(prom -> {
+    vertx.<Void>executeBlocking(() -> {
       synchronized (monitor) {
         if (active) {
           active = false;
@@ -370,12 +373,10 @@ public class IgniteClusterManager implements ClusterManager {
           } catch (Exception e) {
             log.error(e);
           }
-          subsMapHelper = null;
-          nodeInfoMap = null;
         }
       }
 
-      prom.complete();
+      return null;
     }).onComplete(promise);
   }
 
@@ -386,39 +387,29 @@ public class IgniteClusterManager implements ClusterManager {
 
   @Override
   public void addRegistration(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
-    vertx.<Void>executeBlocking(prom -> {
-      subsMapHelper.put(address, registrationInfo)
-        .onComplete(prom);
-    }, false).onComplete(promise);
+    subsMapHelper.put(address, registrationInfo)
+        .onComplete(promise);
   }
 
   @Override
   public void removeRegistration(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
-    vertx.<Void>executeBlocking(prom -> {
-      subsMapHelper.remove(address, registrationInfo, prom);
-    }, false).onComplete(promise);
+    subsMapHelper.remove(address, registrationInfo, promise);
   }
 
   @Override
   public void getRegistrations(String address, Promise<List<RegistrationInfo>> promise) {
-    vertx.<List<RegistrationInfo>>executeBlocking(prom -> {
-      subsMapHelper.get(address, prom);
-    }, false).onComplete(promise);
+    subsMapHelper.get(address, promise);
   }
 
   private void cleanSubs(String id) {
-    try {
-      subsMapHelper.removeAllForNode(id);
-    } catch (IllegalStateException | CacheException e) {
-      //ignore
-    }
+    subsMapHelper.removeAllForNode(id);
   }
 
   private boolean cleanNodeInfos(String nid) {
     try {
       return nodeInfoMap.remove(nid);
     } catch (IllegalStateException | CacheException e) {
-      //ignore
+      log.warn("Could not remove nodeInfo (" + nid + "): " + e.getMessage());
     }
     return false;
   }
@@ -519,7 +510,7 @@ public class IgniteClusterManager implements ClusterManager {
 
     @Override
     public Future<Long> get() {
-      return vertx.executeBlocking(fut -> fut.complete(cnt.get()));
+      return vertx.executeBlocking(cnt::get);
     }
 
     @Override
@@ -530,7 +521,7 @@ public class IgniteClusterManager implements ClusterManager {
 
     @Override
     public Future<Long> incrementAndGet() {
-      return vertx.executeBlocking(fut -> fut.complete(cnt.incrementAndGet()));
+      return vertx.executeBlocking(cnt::incrementAndGet);
     }
 
     @Override
@@ -541,7 +532,7 @@ public class IgniteClusterManager implements ClusterManager {
 
     @Override
     public Future<Long> getAndIncrement() {
-      return vertx.executeBlocking(fut -> fut.complete(cnt.getAndIncrement()));
+      return vertx.executeBlocking(cnt::getAndIncrement);
     }
 
     @Override
@@ -552,7 +543,7 @@ public class IgniteClusterManager implements ClusterManager {
 
     @Override
     public Future<Long> decrementAndGet() {
-      return vertx.executeBlocking(fut -> fut.complete(cnt.decrementAndGet()));
+      return vertx.executeBlocking(cnt::decrementAndGet);
     }
 
     @Override
@@ -563,7 +554,7 @@ public class IgniteClusterManager implements ClusterManager {
 
     @Override
     public Future<Long> addAndGet(long value) {
-      return vertx.executeBlocking(fut -> fut.complete(cnt.addAndGet(value)));
+      return vertx.executeBlocking(() -> cnt.addAndGet(value));
     }
 
     @Override
@@ -574,7 +565,7 @@ public class IgniteClusterManager implements ClusterManager {
 
     @Override
     public Future<Long> getAndAdd(long value) {
-      return vertx.executeBlocking(fut -> fut.complete(cnt.getAndAdd(value)));
+      return vertx.executeBlocking(() -> cnt.getAndAdd(value));
     }
 
     @Override
@@ -585,7 +576,7 @@ public class IgniteClusterManager implements ClusterManager {
 
     @Override
     public Future<Boolean> compareAndSet(long expected, long value) {
-      return vertx.executeBlocking(fut -> fut.complete(cnt.compareAndSet(expected, value)));
+      return vertx.executeBlocking(() -> cnt.compareAndSet(expected, value));
     }
 
     @Override
