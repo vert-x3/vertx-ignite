@@ -46,13 +46,13 @@ public class IgniteComplexHATest extends io.vertx.tests.ha.ComplexHATest {
   }
 
   @Override
-  protected void clusteredVertx(VertxOptions options, Handler<AsyncResult<Vertx>> ar) {
+  protected Future<Vertx> clusteredVertx(VertxOptions options) {
     try {
       MILLISECONDS.sleep(1000L);
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
-    super.clusteredVertx(options, ar);
+    return super.clusteredVertx(options);
   }
 
   @Override
