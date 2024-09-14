@@ -19,8 +19,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.VertxException;
 import io.vertx.core.internal.VertxInternal;
-import io.vertx.core.spi.cluster.NodeSelector;
 import io.vertx.core.spi.cluster.RegistrationInfo;
+import io.vertx.core.spi.cluster.RegistrationListener;
 import io.vertx.core.spi.cluster.RegistrationUpdateEvent;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -44,14 +44,14 @@ import static java.util.stream.Collectors.toList;
  */
 public class SubsMapHelper {
   private final IgniteCache<IgniteRegistrationInfo, Boolean> map;
-  private final NodeSelector nodeSelector;
+  private final RegistrationListener registrationListener;
   private final ConcurrentMap<String, Set<RegistrationInfo>> localSubs = new ConcurrentHashMap<>();
   private final Throttling throttling;
   private volatile boolean shutdown;
 
-  public SubsMapHelper(Ignite ignite, NodeSelector nodeSelector, VertxInternal vertxInternal) {
+  public SubsMapHelper(Ignite ignite, RegistrationListener registrationListener, VertxInternal vertxInternal) {
     map = ignite.getOrCreateCache("__vertx.subs");
-    this.nodeSelector = nodeSelector;
+    this.registrationListener = registrationListener;
     throttling = new Throttling(vertxInternal, this::getAndUpdate);
     shutdown = false;
     map.query(new ContinuousQuery<IgniteRegistrationInfo, Boolean>()
@@ -156,9 +156,9 @@ public class SubsMapHelper {
 
   private Future<List<RegistrationInfo>> getAndUpdate(String address) {
     Promise<List<RegistrationInfo>> prom = Promise.promise();
-    if (nodeSelector.wantsUpdatesFor(address)) {
+    if (registrationListener.wantsUpdatesFor(address)) {
       prom.future().onSuccess(registrationInfos -> {
-        nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, registrationInfos));
+        registrationListener.registrationsUpdated(new RegistrationUpdateEvent(address, registrationInfos));
       });
       prom.complete(get(address));
     } else {

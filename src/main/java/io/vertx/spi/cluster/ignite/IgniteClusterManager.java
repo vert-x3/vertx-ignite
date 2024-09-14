@@ -84,7 +84,7 @@ public class IgniteClusterManager implements ClusterManager {
   private static final int[] IGNITE_EVENTS = new int[]{EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED, EVT_NODE_SEGMENTED};
 
   private VertxInternal vertx;
-  private NodeSelector nodeSelector;
+  private RegistrationListener registrationListener;
 
   private IgniteConfiguration extCfg;
   private IgniteOptions extOptions;
@@ -185,9 +185,13 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   @Override
-  public void init(Vertx vertx, NodeSelector nodeSelector) {
+  public void init(Vertx vertx) {
     this.vertx = (VertxInternal) vertx;
-    this.nodeSelector = nodeSelector;
+  }
+
+  @Override
+  public void registrationListener(RegistrationListener registrationListener) {
+    this.registrationListener = registrationListener;
   }
 
   @Override
@@ -335,7 +339,7 @@ public class IgniteClusterManager implements ClusterManager {
           };
 
           ignite.events().localListen(eventListener, IGNITE_EVENTS);
-          subsMapHelper = new SubsMapHelper(ignite, nodeSelector, vertx);
+          subsMapHelper = new SubsMapHelper(ignite, registrationListener, vertx);
           nodeInfoMap = ignite.getOrCreateCache("__vertx.nodeInfo");
 
           MILLISECONDS.sleep(delayAfterStart);
