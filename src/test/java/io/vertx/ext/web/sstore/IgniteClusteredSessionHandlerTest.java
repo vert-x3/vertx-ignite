@@ -20,6 +20,7 @@ import io.vertx.Lifecycle;
 import io.vertx.LoggingTestWatcher;
 import io.vertx.core.Vertx;
 import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.ext.web.it.sstore.ClusteredSessionHandlerTest;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
