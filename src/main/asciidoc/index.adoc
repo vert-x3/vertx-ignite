@@ -242,6 +242,7 @@ Note that some systems don't consult the routing table for IP multicast routing,
 
 MacOS example:
 
+[source,shell]
 ----
 # Adds a multicast route for 224.0.0.1-231.255.255.254
 sudo route add -net 224.0.0.0/5 127.0.0.1
@@ -260,6 +261,7 @@ VPN software on your machine), then Apache Ignite may be using the wrong one.
 To tell Ignite to use a specific interface you can provide the IP address of the interface to the
 bean of `IgniteConfiguration` type using `localHost` property. For example:
 
+[source,json]
 ----
 {
   "localHost": "192.168.1.20"
@@ -269,6 +271,7 @@ bean of `IgniteConfiguration` type using `localHost` property. For example:
 When running Vert.x is in clustered mode, you should also make sure that Vert.x knows about the correct interface.
 When running at the command line this is done by specifying the `cluster-host` option:
 
+[source,shell]
 ----
 vertx run myverticle.js -cluster -cluster-host your-ip-address
 ----
@@ -300,22 +303,25 @@ You can do this (when using the default JUL logging) by adding a file called `ve
 This is a standard java.util.loging (JUL) configuration file.
 Inside it set:
 
+[source,properties]
 ----
 org.apache.ignite.level=INFO
 ----
 
 and also
 
+[source,properties]
 ----
 java.util.logging.ConsoleHandler.level=INFO
 java.util.logging.FileHandler.level=INFO
 ----
 
 
-=== JDK17 later
+=== JDK17 and later
 
+Add VM options:
 
-add vm options
+[source,properties]
 ----
 --add-opens=java.base/java.nio=ALL-UNNAMED 
 --add-opens=java.base/java.util=ALL-UNNAMED 
