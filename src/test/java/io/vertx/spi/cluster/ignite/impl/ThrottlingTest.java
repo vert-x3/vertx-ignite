@@ -64,7 +64,7 @@ public class ThrottlingTest extends VertxTestBase {
       executorService.submit(() -> {
         try {
           do {
-            sleepMax(5);
+            randomSleep();
             throttling.onEvent(addresses[ThreadLocalRandom.current().nextInt(addresses.length)]);
           } while (SECONDS.convert(System.nanoTime() - start, NANOSECONDS) < duration);
         } finally {
@@ -79,23 +79,26 @@ public class ThrottlingTest extends VertxTestBase {
         return false;
       }
       for (List<Long> nanoTimes : events.values()) {
-        Long previous = null;
-        for (Long nanoTime : nanoTimes) {
-          if (previous != null) {
-            if (MILLISECONDS.convert(nanoTime - previous, NANOSECONDS) < 20) {
-              return false;
+        // must synchronize on synchronizedList traversal
+        synchronized (nanoTimes) {
+          Long previous = null;
+          for (Long nanoTime : nanoTimes) {
+            if (previous != null) {
+              if (MILLISECONDS.convert(nanoTime - previous, NANOSECONDS) < 20) {
+                return false;
+              }
             }
+            previous = nanoTime;
           }
-          previous = nanoTime;
         }
       }
       return true;
     }, 1000);
   }
 
-  private void sleepMax(long time) {
+  private void randomSleep() {
     try {
-      MILLISECONDS.sleep(ThreadLocalRandom.current().nextLong(time));
+      MILLISECONDS.sleep(ThreadLocalRandom.current().nextLong(5));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
