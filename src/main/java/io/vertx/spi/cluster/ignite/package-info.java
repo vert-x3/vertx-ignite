@@ -14,7 +14,7 @@
  *
  * You may elect to redistribute this code under either of these licenses.
  */
-@ModuleGen(name = "vertx-ignite", groupPackage = "io.vertx", useFutures = true)
+@ModuleGen(name = "vertx-ignite", groupPackage = "io.vertx")
 package io.vertx.spi.cluster.ignite;
 
 import io.vertx.codegen.annotations.ModuleGen;
