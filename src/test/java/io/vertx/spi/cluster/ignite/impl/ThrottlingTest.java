@@ -48,7 +48,7 @@ public class ThrottlingTest extends VertxTestBase {
     Throttling throttling = new Throttling((VertxInternal) vertx, address -> {
       events.compute(address, (k, v) -> {
         if (v == null) {
-          v = Collections.synchronizedList(Collections.synchronizedList(new LinkedList<>()));
+          v = Collections.synchronizedList(new LinkedList<>());
         }
         v.add(System.nanoTime());
         return v;

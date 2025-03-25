@@ -270,12 +270,9 @@ public class IgniteClusterManager implements ClusterManager {
   public List<String> getNodes() {
     try {
       Collection<ClusterNode> nodes = ignite.cluster().nodes();
-      List<String> nodeIds;
-      synchronized (nodes) {
-        nodeIds = new ArrayList<>(nodes.size());
-        for (ClusterNode node : nodes) {
-          nodeIds.add(nodeId(node));
-        }
+      List<String> nodeIds = new ArrayList<>(nodes.size());
+      for (ClusterNode node : nodes) {
+        nodeIds.add(nodeId(node));
       }
       return nodeIds;
     } catch (IllegalStateException e) {
