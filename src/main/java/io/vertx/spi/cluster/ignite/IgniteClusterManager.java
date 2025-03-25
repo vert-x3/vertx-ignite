@@ -50,7 +50,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -270,8 +269,12 @@ public class IgniteClusterManager implements ClusterManager {
   @Override
   public List<String> getNodes() {
     try {
-      return ignite.cluster().nodes().stream()
-        .map(IgniteClusterManager::nodeId).collect(Collectors.toList());
+      Collection<ClusterNode> nodes = ignite.cluster().nodes();
+      List<String> nodeIds = new ArrayList<>(nodes.size());
+      for (ClusterNode node : nodes) {
+        nodeIds.add(nodeId(node));
+      }
+      return nodeIds;
     } catch (IllegalStateException e) {
       log.debug(e.getMessage());
       return Collections.emptyList();
@@ -401,18 +404,14 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   private void cleanSubs(String id) {
-    try {
-      subsMapHelper.removeAllForNode(id);
-    } catch (IllegalStateException | CacheException e) {
-      //ignore
-    }
+    subsMapHelper.removeAllForNode(id);
   }
 
   private boolean cleanNodeInfos(String nid) {
     try {
       return nodeInfoMap.remove(nid);
     } catch (IllegalStateException | CacheException e) {
-      //ignore
+      log.warn("Could not remove nodeInfo (" + nid + "): " + e.getMessage());
     }
     return false;
   }
