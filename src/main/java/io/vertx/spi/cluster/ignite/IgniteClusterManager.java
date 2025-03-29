@@ -383,18 +383,12 @@ public class IgniteClusterManager implements ClusterManager {
 
   @Override
   public void addRegistration(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
-    vertx.<Void>executeBlocking(() -> {
-      subsMapHelper.put(address, registrationInfo);
-      return null;
-    }, false).onComplete(promise);
+    vertx.executeBlocking(() -> subsMapHelper.put(address, registrationInfo), false).onComplete(promise);
   }
 
   @Override
   public void removeRegistration(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
-    vertx.<Void>executeBlocking(() -> {
-      subsMapHelper.remove(address, registrationInfo);
-      return null;
-    }, false).onComplete(promise);
+    vertx.<Void>executeBlocking(() -> subsMapHelper.remove(address, registrationInfo), false).onComplete(promise);
   }
 
   @Override
@@ -515,22 +509,22 @@ public class IgniteClusterManager implements ClusterManager {
 
     @Override
     public Future<Long> get() {
-      return vertx.executeBlocking(() -> cnt.get());
+      return vertx.executeBlocking(cnt::get);
     }
 
     @Override
     public Future<Long> incrementAndGet() {
-      return vertx.executeBlocking(() -> cnt.incrementAndGet());
+      return vertx.executeBlocking(cnt::incrementAndGet);
     }
 
     @Override
     public Future<Long> getAndIncrement() {
-      return vertx.executeBlocking(() -> cnt.getAndIncrement());
+      return vertx.executeBlocking(cnt::getAndIncrement);
     }
 
     @Override
     public Future<Long> decrementAndGet() {
-      return vertx.executeBlocking(() -> cnt.decrementAndGet());
+      return vertx.executeBlocking(cnt::decrementAndGet);
     }
 
     @Override
