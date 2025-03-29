@@ -52,7 +52,7 @@ public class SubsMapHelper {
   public SubsMapHelper(Ignite ignite, RegistrationListener registrationListener, VertxInternal vertxInternal) {
     map = ignite.getOrCreateCache("__vertx.subs");
     this.registrationListener = registrationListener;
-    throttling = new Throttling(vertxInternal, this::getAndUpdate);
+    throttling = new Throttling(vertxInternal, a -> getAndUpdate(a, vertxInternal));
     shutdown = false;
     map.query(new ContinuousQuery<IgniteRegistrationInfo, Boolean>()
       .setAutoUnsubscribe(true)
@@ -91,7 +91,7 @@ public class SubsMapHelper {
     }
   }
 
-  public void put(String address, RegistrationInfo registrationInfo) {
+  public Void put(String address, RegistrationInfo registrationInfo) {
     if (shutdown) {
       throw new VertxException("shutdown in progress");
     }
@@ -105,6 +105,7 @@ public class SubsMapHelper {
     } catch (IllegalStateException | CacheException e) {
       throw new VertxException(e);
     }
+    return null;
   }
 
   private Set<RegistrationInfo> addToSet(RegistrationInfo registrationInfo, Set<RegistrationInfo> curr) {
@@ -113,9 +114,9 @@ public class SubsMapHelper {
     return res;
   }
 
-  public void remove(String address, RegistrationInfo registrationInfo) {
+  public Void remove(String address, RegistrationInfo registrationInfo) {
     if (shutdown) {
-      return;
+      return null;
     }
     try {
       if (registrationInfo.localOnly()) {
@@ -127,6 +128,7 @@ public class SubsMapHelper {
     } catch (IllegalStateException | CacheException e) {
       throw new VertxException(e, true);
     }
+    return null;
   }
 
   private Set<RegistrationInfo> removeFromSet(RegistrationInfo registrationInfo, Set<RegistrationInfo> curr) {
@@ -154,13 +156,15 @@ public class SubsMapHelper {
     throttling.onEvent(address);
   }
 
-  private Future<List<RegistrationInfo>> getAndUpdate(String address) {
+  private Future<List<RegistrationInfo>> getAndUpdate(String address, VertxInternal vertxInternal) {
     Promise<List<RegistrationInfo>> prom = Promise.promise();
     if (registrationListener.wantsUpdatesFor(address)) {
       prom.future().onSuccess(registrationInfos -> {
         registrationListener.registrationsUpdated(new RegistrationUpdateEvent(address, registrationInfos));
       });
-      prom.complete(get(address));
+      vertxInternal.executeBlocking(() ->
+        get(address), false
+      ).onComplete(prom);
     } else {
       prom.complete();
     }
@@ -174,6 +178,6 @@ public class SubsMapHelper {
         .distinct()
         .forEach(this::fireRegistrationUpdateEvent);
       return null;
-    });
+    }, false);
   }
 }
