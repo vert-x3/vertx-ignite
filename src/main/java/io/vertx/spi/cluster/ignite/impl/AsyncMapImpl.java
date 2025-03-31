@@ -163,10 +163,7 @@ public class AsyncMapImpl<K, V> implements AsyncMap<K, V> {
       : cache;
 
     return vertx.executeBlocking(
-      () -> {
-        IgniteFuture<T> future = cacheOp.apply(cache0);
-        return unmarshal(future.get());
-      }
+      () -> unmarshal(cacheOp.apply(cache0).get())
     );
   }
 }
