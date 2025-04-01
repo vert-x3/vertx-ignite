@@ -20,7 +20,7 @@
   </scm>
 
   <properties>
-    <ignite.version>2.16.0</ignite.version>
+    <ignite.version>2.17.0</ignite.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
   </properties>
 
