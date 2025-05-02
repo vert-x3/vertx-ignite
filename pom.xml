@@ -14,7 +14,6 @@
   <name>Vert.x Ignite Cluster Manager</name>
 
   <properties>
-    <stack.version>4.5.15-SNAPSHOT</stack.version>
     <ignite.version>2.16.0</ignite.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
     <jar.manifest>${project.basedir}/src/main/resources/META-INF/MANIFEST.MF</jar.manifest>
@@ -25,7 +24,7 @@
       <dependency>
         <groupId>io.vertx</groupId>
         <artifactId>vertx-dependencies</artifactId>
-        <version>${stack.version}</version>
+        <version>${project.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
