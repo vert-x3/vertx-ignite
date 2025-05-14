@@ -199,7 +199,7 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   @Override
-  public <K, V> void getAsyncMap(String name, Promise<AsyncMap<K, V>> promise) {
+  public <K, V> void getAsyncMap(String name, Completable<AsyncMap<K, V>> promise) {
     vertx.<AsyncMap<K, V>>executeBlocking(() -> new AsyncMapImpl<>(getCache(name), vertx)).onComplete(promise);
   }
 
@@ -209,7 +209,7 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   @Override
-  public void getLockWithTimeout(String name, long timeout, Promise<Lock> promise) {
+  public void getLockWithTimeout(String name, long timeout, Completable<Lock> promise) {
     vertx.<Lock>executeBlocking(() -> {
       IgniteSemaphore semaphore = ignite.semaphore(LOCK_SEMAPHORE_PREFIX + name, 1, true, true);
       boolean locked;
@@ -228,7 +228,7 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   @Override
-  public void getCounter(String name, Promise<Counter> promise) {
+  public void getCounter(String name, Completable<Counter> promise) {
     vertx.<Counter>executeBlocking(() -> new CounterImpl(ignite.atomicLong(name, 0, true))).onComplete(promise);
   }
 
@@ -238,7 +238,7 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   @Override
-  public void setNodeInfo(NodeInfo nodeInfo, Promise<Void> promise) {
+  public void setNodeInfo(NodeInfo nodeInfo, Completable<Void> promise) {
     synchronized (this) {
       this.nodeInfo = nodeInfo;
     }
@@ -255,12 +255,12 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   @Override
-  public void getNodeInfo(String id, Promise<NodeInfo> promise) {
+  public void getNodeInfo(String id, Completable<NodeInfo> promise) {
     nodeInfoMap.getAsync(id).listen(fut -> {
       try {
         IgniteNodeInfo value = fut.get();
         if (value != null) {
-          promise.complete(value.unwrap());
+          promise.succeed(value.unwrap());
         } else {
           promise.fail("Not a member of the cluster");
         }
@@ -286,7 +286,7 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   @Override
-  public void join(Promise<Void> promise) {
+  public void join(Completable<Void> promise) {
     vertx.<Void>executeBlocking(() -> {
       synchronized (monitor) {
         if (!active) {
@@ -353,7 +353,7 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   @Override
-  public void leave(Promise<Void> promise) {
+  public void leave(Completable<Void> promise) {
     vertx.<Void>executeBlocking(() -> {
       synchronized (monitor) {
         if (active) {
@@ -385,17 +385,17 @@ public class IgniteClusterManager implements ClusterManager {
   }
 
   @Override
-  public void addRegistration(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
+  public void addRegistration(String address, RegistrationInfo registrationInfo, Completable<Void> promise) {
     vertx.executeBlocking(() -> subsMapHelper.put(address, registrationInfo), false).onComplete(promise);
   }
 
   @Override
-  public void removeRegistration(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
+  public void removeRegistration(String address, RegistrationInfo registrationInfo, Completable<Void> promise) {
     vertx.<Void>executeBlocking(() -> subsMapHelper.remove(address, registrationInfo), false).onComplete(promise);
   }
 
   @Override
-  public void getRegistrations(String address, Promise<List<RegistrationInfo>> promise) {
+  public void getRegistrations(String address, Completable<List<RegistrationInfo>> promise) {
     vertx.executeBlocking(() -> subsMapHelper.get(address), false).onComplete(promise);
   }
 
