@@ -19,6 +19,9 @@ import io.vertx.codegen.annotations.DataObject;
 import io.vertx.codegen.json.annotations.JsonGen;
 import io.vertx.core.json.JsonObject;
 import org.apache.ignite.cache.*;
+import org.apache.ignite.cache.eviction.EvictionPolicy;
+import org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy;
+import org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicyFactory;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.*;
 import static org.apache.ignite.configuration.CacheConfiguration.*;
@@ -50,6 +53,7 @@ public class IgniteCacheOptions {
   private boolean eventsDisabled;
   private JsonObject expiryPolicy;
   private boolean metricsEnabled;
+  private JsonObject evictionPolicy;
 
   /**
    * Default constructor
@@ -69,6 +73,7 @@ public class IgniteCacheOptions {
     maxQueryInteratorsCount = DFLT_MAX_QUERY_ITERATOR_CNT;
     eventsDisabled = DFLT_EVENTS_DISABLED;
     metricsEnabled = false;
+    evictionPolicy = null;
   }
 
   /**
@@ -98,6 +103,7 @@ public class IgniteCacheOptions {
     this.eventsDisabled = options.eventsDisabled;
     this.expiryPolicy = options.expiryPolicy;
     this.metricsEnabled = options.metricsEnabled;
+    this.evictionPolicy = options.evictionPolicy;
   }
 
   /**
@@ -583,6 +589,29 @@ public class IgniteCacheOptions {
    */
   public IgniteCacheOptions setMetricsEnabled(boolean metricsEnabled) {
     this.metricsEnabled = metricsEnabled;
+    return this;
+  }
+
+  /**
+   * Gets on-heap cache eviction policy object.
+   *
+   * @return Json representation of eviction policy.
+   */
+  public JsonObject getEvictionPolicy() {
+    return evictionPolicy;
+  }
+
+  /**
+   * Sets on-heap cache eviction policy object.
+   * Requires a type which defaults to "lru" and an optional maxSize, batchSize and maxMemSize in bytes
+   * maxSize defaults to 100000, batchSize to 1 and maxMemSize to 0 (unlimited)
+   * Valid type values are: lru, fifo and sorted
+   *
+   * @param evictionPolicy Json representation of eviction policy.
+   * @return reference to this, for fluency
+   */
+  public IgniteCacheOptions setEvictionPolicy(JsonObject evictionPolicy) {
+    this.evictionPolicy = evictionPolicy;
     return this;
   }
 

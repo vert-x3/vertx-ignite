@@ -119,6 +119,11 @@ public class IgniteCacheOptionsConverter {
             obj.setMetricsEnabled((Boolean)member.getValue());
           }
           break;
+        case "evictionPolicy":
+          if (member.getValue() instanceof JsonObject) {
+            obj.setEvictionPolicy(((JsonObject)member.getValue()).copy());
+          }
+          break;
       }
     }
   }
@@ -165,5 +170,8 @@ public class IgniteCacheOptionsConverter {
       json.put("expiryPolicy", obj.getExpiryPolicy());
     }
     json.put("metricsEnabled", obj.isMetricsEnabled());
+    if (obj.getEvictionPolicy() != null) {
+      json.put("evictionPolicy", obj.getEvictionPolicy());
+    }
   }
 }
