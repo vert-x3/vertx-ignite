@@ -4,6 +4,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.VertxException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.spi.cluster.ignite.util.ConfigHelper;
+import org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicyFactory;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
@@ -116,6 +117,10 @@ public class IgniteOptionsTest {
     assertEquals(options.getCacheConfiguration().get(0).isReadFromBackup(), config.getCacheConfiguration()[0].isReadFromBackup());
     assertEquals(options.getCacheConfiguration().get(0).isMetricsEnabled(), config.getCacheConfiguration()[0].isStatisticsEnabled());
     assertNotNull(config.getCacheConfiguration()[0].getExpiryPolicyFactory());
+    assertNotNull(config.getCacheConfiguration()[0].getEvictionPolicyFactory());
+    assertEquals(options.getCacheConfiguration().get(0).getEvictionPolicy().getInteger("maxSize").intValue(), ((FifoEvictionPolicyFactory)config.getCacheConfiguration()[0].getEvictionPolicyFactory()).getMaxSize());
+    assertEquals(options.getCacheConfiguration().get(0).getEvictionPolicy().getInteger("batchSize").intValue(), ((FifoEvictionPolicyFactory)config.getCacheConfiguration()[0].getEvictionPolicyFactory()).getBatchSize());
+    assertEquals(options.getCacheConfiguration().get(0).getEvictionPolicy().getInteger("maxMemSize").intValue(), ((FifoEvictionPolicyFactory)config.getCacheConfiguration()[0].getEvictionPolicyFactory()).getMaxMemorySize());
     assertEquals(options.getPageSize(), config.getDataStorageConfiguration().getPageSize());
     assertEquals(options.getDefaultRegionInitialSize(), config.getDataStorageConfiguration().getDefaultDataRegionConfiguration().getInitialSize());
     assertEquals(options.getDefaultRegionMaxSize(), config.getDataStorageConfiguration().getDefaultDataRegionConfiguration().getMaxSize());
@@ -173,6 +178,12 @@ public class IgniteOptionsTest {
           .put("duration", 60000L)
         )
         .setMetricsEnabled(true)
+        .setEvictionPolicy(new JsonObject()
+          .put("type", "fifo")
+          .put("maxSize", 1000)
+          .put("batchSize", 2)
+          .put("maxMemSize", 1000L)
+        )
       ))
       .setPageSize(1024)
       .setDefaultRegionInitialSize(40L * 1024 * 1024)
@@ -248,6 +259,10 @@ public class IgniteOptionsTest {
     assertEquals(options.getCacheConfiguration().get(0).getExpiryPolicy().getString("type"), json.getJsonArray("cacheConfiguration").getJsonObject(0).getJsonObject("expiryPolicy").getString("type"));
     assertEquals(options.getCacheConfiguration().get(0).getExpiryPolicy().getString("duration"), json.getJsonArray("cacheConfiguration").getJsonObject(0).getJsonObject("expiryPolicy").getString("duration"));
     assertEquals(options.getCacheConfiguration().get(0).isMetricsEnabled(), json.getJsonArray("cacheConfiguration").getJsonObject(0).getBoolean("metricsEnabled"));
+    assertEquals(options.getCacheConfiguration().get(0).getEvictionPolicy().getString("type"), json.getJsonArray("cacheConfiguration").getJsonObject(0).getJsonObject("evictionPolicy").getString("type"));
+    assertEquals(options.getCacheConfiguration().get(0).getEvictionPolicy().getString("maxSize"), json.getJsonArray("cacheConfiguration").getJsonObject(0).getJsonObject("evictionPolicy").getString("maxSize"));
+    assertEquals(options.getCacheConfiguration().get(0).getEvictionPolicy().getString("batchSize"), json.getJsonArray("cacheConfiguration").getJsonObject(0).getJsonObject("evictionPolicy").getString("batchSize"));
+    assertEquals(options.getCacheConfiguration().get(0).getEvictionPolicy().getString("maxMemSize"), json.getJsonArray("cacheConfiguration").getJsonObject(0).getJsonObject("evictionPolicy").getString("maxMemSize"));
     assertEquals(options.getPageSize(), json.getInteger("pageSize").intValue());
     assertEquals(options.getDefaultRegionInitialSize(), json.getLong("defaultRegionInitialSize").longValue());
     assertEquals(options.getDefaultRegionMaxSize(), json.getLong("defaultRegionMaxSize").longValue());
@@ -308,6 +323,12 @@ public class IgniteOptionsTest {
     "    \"expiryPolicy\": {\n" +
     "      \"type\": \"created\",\n" +
     "      \"duration\": 60000\n" +
+    "    },\n" +
+    "    \"evictionPolicy\": {\n" +
+    "      \"type\": \"fifo\",\n" +
+    "      \"maxSize\": 1000,\n" +
+    "      \"batchSize\": 2,\n" +
+    "      \"maxMemSize\": 1000\n" +
     "    }\n" +
     "  }],\n" +
     "  \"sslContextFactory\": {\n" +
