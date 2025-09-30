@@ -11,6 +11,10 @@ import io.vertx.spi.cluster.ignite.*;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.*;
+import org.apache.ignite.cache.eviction.EvictionPolicy;
+import org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicyFactory;
+import org.apache.ignite.cache.eviction.lru.LruEvictionPolicyFactory;
+import org.apache.ignite.cache.eviction.sorted.SortedEvictionPolicyFactory;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -45,6 +49,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static org.apache.ignite.configuration.CacheConfiguration.DFLT_CACHE_SIZE;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_DATA_REG_DEFAULT_NAME;
 import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.*;
 import static org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder.*;
@@ -320,6 +325,24 @@ public class ConfigHelper {
           factory = CreatedExpiryPolicy.factoryOf(duration);
       }
       cfg.setExpiryPolicyFactory(factory);
+      if (options.isOnheapCacheEnabled() && options.getEvictionPolicy() != null) {
+        int maxSize = options.getEvictionPolicy().getInteger("maxSize", DFLT_CACHE_SIZE);
+        int batchSize = options.getEvictionPolicy().getInteger("batchSize", 1);
+        long maxMemSize = options.getEvictionPolicy().getLong("maxMemSize", 0L);
+        Factory<EvictionPolicy> evictionPolicyFactory;
+        switch (options.getEvictionPolicy().getString("type", "lru")) {
+          case "fifo":
+            evictionPolicyFactory = new FifoEvictionPolicyFactory(maxSize, batchSize, maxMemSize);
+            break;
+          case "sorted":
+            evictionPolicyFactory = new SortedEvictionPolicyFactory(maxSize, batchSize, maxMemSize);
+            break;
+          case "lru":
+          default:
+            evictionPolicyFactory = new LruEvictionPolicyFactory(maxSize, batchSize, maxMemSize);
+        }
+        cfg.setEvictionPolicyFactory(evictionPolicyFactory);
+      }
     }
     return cfg;
   }
