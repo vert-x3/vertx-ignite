@@ -134,6 +134,11 @@ public class IgniteOptionsConverter {
             obj.setDelayAfterStart(((Number)member.getValue()).longValue());
           }
           break;
+        case "dataPageEvictionMode":
+          if (member.getValue() instanceof String) {
+            obj.setDataPageEvictionMode((String)member.getValue());
+          }
+          break;
       }
     }
   }
@@ -178,5 +183,8 @@ public class IgniteOptionsConverter {
       json.put("metricExporterSpi", obj.getMetricExporterSpi().toJson());
     }
     json.put("delayAfterStart", obj.getDelayAfterStart());
+    if (obj.getDataPageEvictionMode() != null) {
+      json.put("dataPageEvictionMode", obj.getDataPageEvictionMode());
+    }
   }
 }

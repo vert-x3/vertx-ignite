@@ -125,6 +125,7 @@ public class IgniteOptionsTest {
     assertEquals(options.getDefaultRegionInitialSize(), config.getDataStorageConfiguration().getDefaultDataRegionConfiguration().getInitialSize());
     assertEquals(options.getDefaultRegionMaxSize(), config.getDataStorageConfiguration().getDefaultDataRegionConfiguration().getMaxSize());
     assertEquals(options.isDefaultRegionMetricsEnabled(), config.getDataStorageConfiguration().getDefaultDataRegionConfiguration().isMetricsEnabled());
+    assertEquals(options.getDataPageEvictionMode(), config.getDataStorageConfiguration().getDefaultDataRegionConfiguration().getPageEvictionMode().name());
     assertEquals(options.getMetricsUpdateFrequency(), config.getMetricsUpdateFrequency());
     assertEquals(options.getClientFailureDetectionTimeout(), config.getClientFailureDetectionTimeout().longValue());
     assertEquals(options.getMetricsHistorySize(), config.getMetricsHistorySize());
@@ -271,6 +272,7 @@ public class IgniteOptionsTest {
     assertEquals(options.getClientFailureDetectionTimeout(), json.getLong("clientFailureDetectionTimeout").longValue());
     assertEquals(options.getMetricsHistorySize(), json.getInteger("metricsHistorySize").intValue());
     assertEquals(options.getMetricsExpireTime(), json.getLong("metricsExpireTime").longValue());
+    assertEquals(options.getDataPageEvictionMode(), json.getString("dataPageEvictionMode"));
   }
 
   @Test
@@ -350,7 +352,8 @@ public class IgniteOptionsTest {
     "  \"clientFailureDetectionTimeout\": 200000,\n" +
     "  \"metricsHistorySize\": 1,\n" +
     "  \"metricsExpireTime\": 2,\n" +
-    "  \"systemViewExporterSpiDisabled\": true\n" +
+    "  \"systemViewExporterSpiDisabled\": true,\n" +
+    "  \"dataPageEvictionMode\": \"RANDOM_2_LRU\"\n" +
     "}";
 
   @Test
