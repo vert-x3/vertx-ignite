@@ -15,10 +15,7 @@ import org.apache.ignite.cache.eviction.EvictionPolicy;
 import org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicyFactory;
 import org.apache.ignite.cache.eviction.lru.LruEvictionPolicyFactory;
 import org.apache.ignite.cache.eviction.sorted.SortedEvictionPolicyFactory;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.*;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
@@ -155,6 +152,7 @@ public class ConfigHelper {
             .setInitialSize(options.getDefaultRegionInitialSize())
             .setMaxSize(Math.max(options.getDefaultRegionMaxSize(), options.getDefaultRegionInitialSize()))
             .setMetricsEnabled(options.isDefaultRegionMetricsEnabled())
+            .setPageEvictionMode(DataPageEvictionMode.valueOf(options.getDataPageEvictionMode()))
         )
     );
 
