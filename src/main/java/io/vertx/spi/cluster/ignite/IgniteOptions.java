@@ -18,6 +18,7 @@ package io.vertx.spi.cluster.ignite;
 import io.vertx.codegen.annotations.DataObject;
 import io.vertx.codegen.json.annotations.JsonGen;
 import io.vertx.core.json.JsonObject;
+import org.apache.ignite.configuration.DataPageEvictionMode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +56,7 @@ public class IgniteOptions {
   private long metricsExpireTime;
   private IgniteMetricExporterOptions metricExporterOptions;
   private long delayAfterStart;
+  private DataPageEvictionMode dataPageEvictionMode;
 
   /**
    * Default constructor
@@ -81,6 +83,7 @@ public class IgniteOptions {
     metricsExpireTime = DFLT_METRICS_EXPIRE_TIME;
     metricExporterOptions = new IgniteMetricExporterOptions();
     delayAfterStart = 100L;
+    dataPageEvictionMode = DataPageEvictionMode.DISABLED;
   }
 
   /**
@@ -112,6 +115,7 @@ public class IgniteOptions {
     this.metricsExpireTime = options.metricsExpireTime;
     this.metricExporterOptions = options.metricExporterOptions;
     this.delayAfterStart = options.delayAfterStart;
+    this.dataPageEvictionMode = options.dataPageEvictionMode;
   }
 
   /**
@@ -547,6 +551,25 @@ public class IgniteOptions {
    */
   public IgniteOptions setDelayAfterStart(long delayAfterStart) {
     this.delayAfterStart = delayAfterStart;
+    return this;
+  }
+
+  /**
+   * Gets off-heap's Cache Data Page Eviction Policy.
+   *
+   * @return Data Page Cache eviction policy used in 'off-heap' Cache mode.
+   */
+  public String getDataPageEvictionMode() {
+    return dataPageEvictionMode.name();
+  }
+
+  /**
+   * Sets off-heap's Cache Data Page Eviction Policy.
+   * @param dataPageEvictionMode DataPageEvictionMode to be set.
+   * @return reference to this, for fluency
+   */
+  public IgniteOptions setDataPageEvictionMode(String dataPageEvictionMode) {
+    this.dataPageEvictionMode = DataPageEvictionMode.valueOf(dataPageEvictionMode);
     return this;
   }
 
