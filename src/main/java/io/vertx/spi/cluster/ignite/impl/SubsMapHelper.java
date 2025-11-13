@@ -54,7 +54,7 @@ public class SubsMapHelper {
     this.registrationListener = registrationListener;
     throttling = new Throttling(vertxInternal, a -> getAndUpdate(a, vertxInternal));
     shutdown = false;
-    map.query(new ContinuousQuery<IgniteRegistrationInfo, Boolean>()
+    map.withPartitionRecover().query(new ContinuousQuery<IgniteRegistrationInfo, Boolean>()
       .setAutoUnsubscribe(true)
       .setTimeInterval(100L)
       .setPageSize(128)
