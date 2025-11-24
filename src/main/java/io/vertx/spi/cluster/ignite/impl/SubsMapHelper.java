@@ -54,11 +54,7 @@ public class SubsMapHelper {
     this.registrationListener = registrationListener;
     throttling = new Throttling(vertxInternal, a -> getAndUpdate(a, vertxInternal));
     shutdown = false;
-    map.withPartitionRecover().query(new ContinuousQuery<IgniteRegistrationInfo, Boolean>()
-      .setAutoUnsubscribe(true)
-      .setTimeInterval(100L)
-      .setPageSize(128)
-      .setLocalListener(l -> listen(l, vertxInternal)));
+    startListener(vertxInternal, 5, 500L);
   }
 
   public List<RegistrationInfo> get(String address) {
@@ -185,5 +181,26 @@ public class SubsMapHelper {
         .forEach(this::fireRegistrationUpdateEvent);
       return null;
     }, false);
+  }
+
+  private void startListener(VertxInternal vertxInternal, int maxRetries, long delay) {
+    while (maxRetries-- > 0) {
+      try {
+        map.withPartitionRecover().query(new ContinuousQuery<IgniteRegistrationInfo, Boolean>()
+          .setAutoUnsubscribe(true)
+          .setTimeInterval(100L)
+          .setPageSize(128)
+          .setLocalListener(l -> listen(l, vertxInternal)));
+        return;
+      } catch (Exception e) {
+        log.warn("Retrying to start Ignite subs map listener due to exception: " + e.getMessage());
+        try {
+          Thread.sleep(delay);
+        } catch (InterruptedException ex) {
+          Thread.currentThread().interrupt();
+        }
+      }
+    }
+    throw new IllegalStateException("Could not start Ignite subs map listener after retries");
   }
 }
