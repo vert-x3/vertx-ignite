@@ -4,7 +4,8 @@
       "name": "__vertx.*",
       "cacheMode": "REPLICATED",
       "atomicityMode": "ATOMIC",
-      "writeSynchronizationMode": "FULL_SYNC"
+      "writeSynchronizationMode": "FULL_SYNC",
+      "rebalanceMode": "SYNC"
     }, {
       "name": "*",
       "cacheMode": "PARTITIONED",

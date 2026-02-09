@@ -39,6 +39,7 @@
           <property name="cacheMode" value="REPLICATED"/>
           <property name="atomicityMode" value="ATOMIC"/>
           <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+          <property name="rebalanceMode" value="SYNC"/>
         </bean>
         <bean class="org.apache.ignite.configuration.CacheConfiguration">
           <property name="name" value="*"/>
