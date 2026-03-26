@@ -43,7 +43,7 @@ import java.util.stream.StreamSupport;
  */
 public class SubsMapHelper {
   private static final Logger log = LoggerFactory.getLogger(SubsMapHelper.class);
-  private final IgniteCache<IgniteRegistrationInfo, Boolean> map;
+  private final IgniteCache<String, Set<IgniteRegistrationInfo>> map;
   private final RegistrationListener registrationListener;
   private final ConcurrentMap<String, Set<RegistrationInfo>> localSubs = new ConcurrentHashMap<>();
   private final Throttling throttling;
@@ -54,7 +54,7 @@ public class SubsMapHelper {
     this.registrationListener = registrationListener;
     throttling = new Throttling(vertxInternal, a -> getAndUpdate(a, vertxInternal));
     shutdown = false;
-    map.query(new ContinuousQuery<IgniteRegistrationInfo, Boolean>()
+    map.query(new ContinuousQuery<String, Set<IgniteRegistrationInfo>>()
       .setAutoUnsubscribe(true)
       .setTimeInterval(100L)
       .setPageSize(128)
@@ -66,11 +66,9 @@ public class SubsMapHelper {
       return null;
     }
     try {
-      List<Cache.Entry<IgniteRegistrationInfo, Boolean>> remote = map
-        .query(new ScanQuery<IgniteRegistrationInfo, Boolean>((k, v) -> k.address().equals(address)))
-        .getAll();
+      Set<IgniteRegistrationInfo> remote = map.get(address);
       List<RegistrationInfo> infos;
-      int size = remote.size();
+      int size = (remote != null) ? remote.size() : 0;
       Set<RegistrationInfo> local = localSubs.get(address);
       if (local != null) {
         synchronized (local) {
@@ -86,8 +84,10 @@ public class SubsMapHelper {
       } else {
         infos = new ArrayList<>(size);
       }
-      for (Cache.Entry<IgniteRegistrationInfo, Boolean> info : remote) {
-        infos.add(info.getKey().registrationInfo());
+      if (remote != null) {
+          for (IgniteRegistrationInfo info : remote) {
+            infos.add(info.registrationInfo());
+          }
       }
 
       return infos;
@@ -105,7 +105,15 @@ public class SubsMapHelper {
         localSubs.compute(address, (add, curr) -> addToSet(registrationInfo, curr));
         fireRegistrationUpdateEvent(address);
       } else {
-        map.put(new IgniteRegistrationInfo(address, registrationInfo), Boolean.TRUE);
+        Set<IgniteRegistrationInfo> remoteInfos = map.get(address);
+        if (remoteInfos == null) {
+          Set<IgniteRegistrationInfo> newInfoSet = new HashSet<>();
+          newInfoSet.add(new IgniteRegistrationInfo(address, registrationInfo));
+          map.put(address, newInfoSet);
+        } else {
+          remoteInfos.add(new IgniteRegistrationInfo(address, registrationInfo));
+          map.put(address, remoteInfos);
+        }
       }
     } catch (IllegalStateException | CacheException e) {
       throw new VertxException(e);
@@ -128,7 +136,14 @@ public class SubsMapHelper {
         localSubs.computeIfPresent(address, (add, curr) -> removeFromSet(registrationInfo, curr));
         fireRegistrationUpdateEvent(address);
       } else {
-        map.remove(new IgniteRegistrationInfo(address, registrationInfo), Boolean.TRUE);
+        Set<IgniteRegistrationInfo> originalInfos = map.get(address);
+        if (originalInfos != null && originalInfos.remove(new IgniteRegistrationInfo(address, registrationInfo))) {
+          if (originalInfos.isEmpty()) {
+            map.remove(address);
+          } else {
+            map.put(address, originalInfos);
+          }
+        }
       }
     } catch (IllegalStateException | CacheException e) {
       throw new VertxException(e, true);
@@ -142,15 +157,25 @@ public class SubsMapHelper {
   }
 
   public void removeAllForNode(String nodeId) {
-    List<Cache.Entry<IgniteRegistrationInfo, Boolean>> toRemove = map
-      .query(new ScanQuery<IgniteRegistrationInfo, Boolean>((k, v) -> k.registrationInfo().nodeId().equals(nodeId)))
-      .getAll();
-    for (Cache.Entry<IgniteRegistrationInfo, Boolean> info : toRemove) {
-      try {
-        map.remove(info.getKey(), Boolean.TRUE);
-      } catch (IllegalStateException | CacheException t) {
-        log.warn("Could not remove subscriber: " + t.getMessage());
+    try {
+      List<Cache.Entry<String, Set<IgniteRegistrationInfo>>> allEntries = map
+              .query(new ScanQuery<String, Set<IgniteRegistrationInfo>>(null))
+              .getAll();
+      if (allEntries == null || allEntries.isEmpty()) {
+        return;
       }
+      for (Cache.Entry<String, Set<IgniteRegistrationInfo>> entry : allEntries) {
+        String address = entry.getKey();
+        Set<IgniteRegistrationInfo> registrations = entry.getValue();
+        boolean modified = registrations.removeIf(info -> info.registrationInfo().nodeId().equals(nodeId));
+        if (registrations.isEmpty()) {
+          map.remove(address);
+        } else if (modified) {
+          map.put(address, registrations);
+        }
+      }
+    } catch (IllegalStateException | CacheException t) {
+      log.warn("Could not remove subscribers for nodeId " + nodeId + ": " + t.getMessage());
     }
   }
 
@@ -177,10 +202,10 @@ public class SubsMapHelper {
     return prom.future();
   }
 
-  private void listen(final Iterable<CacheEntryEvent<? extends IgniteRegistrationInfo, ? extends Boolean>> events, final VertxInternal vertxInternal) {
+  private void listen(final Iterable<CacheEntryEvent<? extends String, ? extends Set<IgniteRegistrationInfo>>> events, final VertxInternal vertxInternal) {
     vertxInternal.executeBlocking(() -> {
       StreamSupport.stream(events.spliterator(), false)
-        .map(e -> e.getKey().address())
+        .map(Cache.Entry::getKey)
         .distinct()
         .forEach(this::fireRegistrationUpdateEvent);
       return null;
