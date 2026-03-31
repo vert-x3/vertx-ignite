@@ -147,7 +147,12 @@ public class SubsMapHelper {
   public void removeAllForNode(String nodeId) {
     try {
       List<Cache.Entry<String, Set<IgniteRegistrationInfo>>> allEntries = map
-              .query(new ScanQuery<String, Set<IgniteRegistrationInfo>>(null))
+              .query(new ScanQuery<String, Set<IgniteRegistrationInfo>>((key, value) -> {
+                if (value == null || value.isEmpty()) {
+                  return false;
+                }
+                return value.stream().anyMatch(info -> info.registrationInfo().nodeId().equals(nodeId));
+              }))
               .getAll();
       if (allEntries == null || allEntries.isEmpty()) {
         return;
