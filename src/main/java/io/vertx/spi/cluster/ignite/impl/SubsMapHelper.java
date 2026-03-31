@@ -26,15 +26,18 @@ import io.vertx.core.spi.cluster.RegistrationListener;
 import io.vertx.core.spi.cluster.RegistrationUpdateEvent;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.ScanQuery;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.event.CacheEntryEvent;
+import javax.cache.processor.MutableEntry;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
@@ -55,15 +58,15 @@ public class SubsMapHelper {
     throttling = new Throttling(vertxInternal, a -> getAndUpdate(a, vertxInternal));
     shutdown = false;
     map.query(new ContinuousQuery<String, Set<IgniteRegistrationInfo>>()
-      .setAutoUnsubscribe(true)
-      .setTimeInterval(100L)
-      .setPageSize(128)
-      .setLocalListener(l -> listen(l, vertxInternal)));
+            .setAutoUnsubscribe(true)
+            .setTimeInterval(100L)
+            .setPageSize(128)
+            .setLocalListener(l -> listen(l, vertxInternal)));
   }
 
   public List<RegistrationInfo> get(String address) {
     if (shutdown) {
-      return null;
+      return Collections.emptyList();
     }
     try {
       Set<IgniteRegistrationInfo> remote = map.get(address);
@@ -85,9 +88,9 @@ public class SubsMapHelper {
         infos = new ArrayList<>(size);
       }
       if (remote != null) {
-          for (IgniteRegistrationInfo info : remote) {
-            infos.add(info.registrationInfo());
-          }
+        for (IgniteRegistrationInfo info : remote) {
+          infos.add(info.registrationInfo());
+        }
       }
 
       return infos;
@@ -105,18 +108,10 @@ public class SubsMapHelper {
         localSubs.compute(address, (add, curr) -> addToSet(registrationInfo, curr));
         fireRegistrationUpdateEvent(address);
       } else {
-        Set<IgniteRegistrationInfo> remoteInfos = map.get(address);
-        if (remoteInfos == null) {
-          Set<IgniteRegistrationInfo> newInfoSet = new HashSet<>();
-          newInfoSet.add(new IgniteRegistrationInfo(address, registrationInfo));
-          map.put(address, newInfoSet);
-        } else {
-          remoteInfos.add(new IgniteRegistrationInfo(address, registrationInfo));
-          map.put(address, remoteInfos);
-        }
+        map.invoke(address, new AddRegistrationProcessor(new IgniteRegistrationInfo(address, registrationInfo)));
       }
     } catch (IllegalStateException | CacheException e) {
-      throw new VertxException(e);
+      throw new VertxException(e, true);
     }
     return null;
   }
@@ -136,14 +131,7 @@ public class SubsMapHelper {
         localSubs.computeIfPresent(address, (add, curr) -> removeFromSet(registrationInfo, curr));
         fireRegistrationUpdateEvent(address);
       } else {
-        Set<IgniteRegistrationInfo> originalInfos = map.get(address);
-        if (originalInfos != null && originalInfos.remove(new IgniteRegistrationInfo(address, registrationInfo))) {
-          if (originalInfos.isEmpty()) {
-            map.remove(address);
-          } else {
-            map.put(address, originalInfos);
-          }
-        }
+        map.invoke(address, new RemoveRegistrationProcessor(new IgniteRegistrationInfo(address, registrationInfo)));
       }
     } catch (IllegalStateException | CacheException e) {
       throw new VertxException(e, true);
@@ -164,16 +152,10 @@ public class SubsMapHelper {
       if (allEntries == null || allEntries.isEmpty()) {
         return;
       }
-      for (Cache.Entry<String, Set<IgniteRegistrationInfo>> entry : allEntries) {
-        String address = entry.getKey();
-        Set<IgniteRegistrationInfo> registrations = entry.getValue();
-        boolean modified = registrations.removeIf(info -> info.registrationInfo().nodeId().equals(nodeId));
-        if (registrations.isEmpty()) {
-          map.remove(address);
-        } else if (modified) {
-          map.put(address, registrations);
-        }
-      }
+      Set<String> keys = allEntries.stream()
+              .map(Cache.Entry::getKey)
+              .collect(Collectors.toSet());
+      map.invokeAll(keys, new RemoveNodeRegistrationsProcessor(nodeId));
     } catch (IllegalStateException | CacheException t) {
       log.warn("Could not remove subscribers for nodeId " + nodeId + ": " + t.getMessage());
     }
@@ -194,7 +176,7 @@ public class SubsMapHelper {
         registrationListener.registrationsUpdated(new RegistrationUpdateEvent(address, registrationInfos));
       });
       vertxInternal.executeBlocking(() ->
-        get(address), false
+              get(address), false
       ).onComplete(prom);
     } else {
       prom.complete();
@@ -205,10 +187,76 @@ public class SubsMapHelper {
   private void listen(final Iterable<CacheEntryEvent<? extends String, ? extends Set<IgniteRegistrationInfo>>> events, final VertxInternal vertxInternal) {
     vertxInternal.executeBlocking(() -> {
       StreamSupport.stream(events.spliterator(), false)
-        .map(Cache.Entry::getKey)
-        .distinct()
-        .forEach(this::fireRegistrationUpdateEvent);
+              .map(Cache.Entry::getKey)
+              .distinct()
+              .forEach(this::fireRegistrationUpdateEvent);
       return null;
     }, false);
+  }
+
+  private static class AddRegistrationProcessor implements CacheEntryProcessor<String, Set<IgniteRegistrationInfo>, Void> {
+    private static final long serialVersionUID = 1L;
+    private final IgniteRegistrationInfo info;
+
+    AddRegistrationProcessor(IgniteRegistrationInfo info) {
+      this.info = info;
+    }
+
+    @Override
+    public Void process(MutableEntry<String, Set<IgniteRegistrationInfo>> entry, Object... arguments) {
+      Set<IgniteRegistrationInfo> current = entry.getValue();
+      if (current == null) {
+        current = new HashSet<>();
+      }
+      current.add(info);
+      entry.setValue(current);
+      return null;
+    }
+  }
+
+  private static class RemoveRegistrationProcessor implements CacheEntryProcessor<String, Set<IgniteRegistrationInfo>, Void> {
+    private static final long serialVersionUID = 1L;
+    private final IgniteRegistrationInfo info;
+
+    RemoveRegistrationProcessor(IgniteRegistrationInfo info) {
+      this.info = info;
+    }
+
+    @Override
+    public Void process(MutableEntry<String, Set<IgniteRegistrationInfo>> entry, Object... arguments) {
+      Set<IgniteRegistrationInfo> current = entry.getValue();
+      if (current != null) {
+        current.remove(info);
+        if (current.isEmpty()) {
+          entry.remove();
+        } else {
+          entry.setValue(current);
+        }
+      }
+      return null;
+    }
+  }
+
+  private static class RemoveNodeRegistrationsProcessor implements CacheEntryProcessor<String, Set<IgniteRegistrationInfo>, Void> {
+    private static final long serialVersionUID = 1L;
+    private final String nodeId;
+
+    RemoveNodeRegistrationsProcessor(String nodeId) {
+      this.nodeId = nodeId;
+    }
+
+    @Override
+    public Void process(MutableEntry<String, Set<IgniteRegistrationInfo>> entry, Object... arguments) {
+      Set<IgniteRegistrationInfo> current = entry.getValue();
+      if (current != null) {
+        current.removeIf(info -> info.registrationInfo().nodeId().equals(nodeId));
+        if (current.isEmpty()) {
+          entry.remove();
+        } else {
+          entry.setValue(current);
+        }
+      }
+      return null;
+    }
   }
 }
