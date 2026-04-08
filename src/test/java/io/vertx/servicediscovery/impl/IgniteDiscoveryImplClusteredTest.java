@@ -17,7 +17,6 @@ package io.vertx.servicediscovery.impl;
 
 import io.vertx.LoggingTestWatcher;
 import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
 import io.vertx.servicediscovery.ServiceDiscoveryOptions;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
 import org.junit.Before;
@@ -46,5 +45,11 @@ public class IgniteDiscoveryImplClusteredTest extends DiscoveryImplTestBase {
     });
     await().until(() -> vertx != null);
     discovery = new DiscoveryImpl(vertx, new ServiceDiscoveryOptions());
+  }
+
+  @Override
+  public void tearDown() {
+    super.tearDown();
+    System.clearProperty("IGNITE_HOME");
   }
 }

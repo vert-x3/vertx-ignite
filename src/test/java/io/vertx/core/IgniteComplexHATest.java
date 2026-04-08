@@ -46,6 +46,12 @@ public class IgniteComplexHATest extends ComplexHATest {
   }
 
   @Override
+  public void tearDown() throws Exception {
+    super.tearDown();
+    System.clearProperty("IGNITE_HOME");
+  }
+
+  @Override
   protected void clusteredVertx(VertxOptions options, Handler<AsyncResult<Vertx>> ar) {
     try {
       MILLISECONDS.sleep(1000L);
