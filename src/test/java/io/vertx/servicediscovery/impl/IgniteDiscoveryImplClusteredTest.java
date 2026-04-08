@@ -47,4 +47,10 @@ public class IgniteDiscoveryImplClusteredTest extends DiscoveryImplTestBase {
     await().until(() -> vertx != null);
     discovery = new DiscoveryImpl(vertx, new ServiceDiscoveryOptions());
   }
+
+  @Override
+  public void tearDown() {
+    super.tearDown();
+    System.clearProperty("IGNITE_HOME");
+  }
 }

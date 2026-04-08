@@ -46,6 +46,12 @@ public class IgniteComplexHATest extends io.vertx.tests.ha.ComplexHATest {
   }
 
   @Override
+  public void tearDown() throws Exception {
+    super.tearDown();
+    System.clearProperty("IGNITE_HOME");
+  }
+
+  @Override
   protected Future<Vertx> clusteredVertx(VertxOptions options) {
     try {
       MILLISECONDS.sleep(1000L);

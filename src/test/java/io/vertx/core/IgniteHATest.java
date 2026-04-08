@@ -44,6 +44,12 @@ public class IgniteHATest extends io.vertx.tests.ha.HATest {
   }
 
   @Override
+  public void tearDown() throws Exception {
+    super.tearDown();
+    System.clearProperty("IGNITE_HOME");
+  }
+
+  @Override
   protected ClusterManager getClusterManager() {
     return new IgniteClusterManager();
   }

@@ -45,6 +45,12 @@ public class IgniteClusteredAsyncMapTest extends io.vertx.tests.shareddata.Clust
   }
 
   @Override
+  public void tearDown() throws Exception {
+    super.tearDown();
+    System.clearProperty("IGNITE_HOME");
+  }
+
+  @Override
   protected ClusterManager getClusterManager() {
     return new IgniteClusterManager();
   }
