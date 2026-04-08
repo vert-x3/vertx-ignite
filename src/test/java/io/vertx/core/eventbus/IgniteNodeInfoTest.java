@@ -45,6 +45,12 @@ public class IgniteNodeInfoTest extends io.vertx.tests.eventbus.NodeInfoTest {
   }
 
   @Override
+  public void tearDown() throws Exception {
+    super.tearDown();
+    System.clearProperty("IGNITE_HOME");
+  }
+
+  @Override
   protected ClusterManager getClusterManager() {
     return new IgniteClusterManager();
   }

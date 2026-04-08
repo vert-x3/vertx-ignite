@@ -192,6 +192,7 @@
               <IGNITE_NO_ASCII>true</IGNITE_NO_ASCII>
               <IGNITE_UPDATE_NOTIFIER>false</IGNITE_UPDATE_NOTIFIER>
               <IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE>1000</IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE>
+              <IGNITE_AFFINITY_HISTORY_SIZE>500</IGNITE_AFFINITY_HISTORY_SIZE>
               <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.SLF4JLogDelegateFactory</vertx.logger-delegate-factory-class-name>
               <io.netty.leakDetectionLevel>PARANOID</io.netty.leakDetectionLevel>
               <buildDirectory>${project.build.directory}</buildDirectory>
@@ -225,6 +226,7 @@
               <IGNITE_NO_ASCII>true</IGNITE_NO_ASCII>
               <IGNITE_UPDATE_NOTIFIER>false</IGNITE_UPDATE_NOTIFIER>
               <IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE>1000</IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE>
+              <IGNITE_AFFINITY_HISTORY_SIZE>500</IGNITE_AFFINITY_HISTORY_SIZE>
               <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.SLF4JLogDelegateFactory</vertx.logger-delegate-factory-class-name>
               <io.netty.leakDetectionLevel>PARANOID</io.netty.leakDetectionLevel>
               <buildDirectory>${project.build.directory}</buildDirectory>
