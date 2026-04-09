@@ -26,6 +26,10 @@ import io.vertx.core.spi.cluster.RegistrationListener;
 import io.vertx.core.spi.cluster.RegistrationUpdateEvent;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.binary.BinaryObjectException;
+import org.apache.ignite.binary.BinaryReader;
+import org.apache.ignite.binary.BinaryWriter;
+import org.apache.ignite.binary.Binarylizable;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.QueryCursor;
@@ -174,6 +178,9 @@ public class SubsMapHelper {
   }
 
   private void fireRegistrationUpdateEvent(String address) {
+    if (shutdown) {
+      return;
+    }
     throttling.onEvent(address);
   }
 
@@ -208,12 +215,25 @@ public class SubsMapHelper {
     }, false);
   }
 
-  private static class AddRegistrationProcessor implements CacheEntryProcessor<String, Set<IgniteRegistrationInfo>, Void> {
+  private static class AddRegistrationProcessor implements CacheEntryProcessor<String, Set<IgniteRegistrationInfo>, Void>, Binarylizable {
     private static final long serialVersionUID = 1L;
-    private final IgniteRegistrationInfo info;
+    private IgniteRegistrationInfo info;
+
+    AddRegistrationProcessor() {
+    }
 
     AddRegistrationProcessor(IgniteRegistrationInfo info) {
       this.info = info;
+    }
+
+    @Override
+    public void writeBinary(BinaryWriter writer) throws BinaryObjectException {
+      writer.writeObject("info", info);
+    }
+
+    @Override
+    public void readBinary(BinaryReader reader) throws BinaryObjectException {
+      info = reader.readObject("info");
     }
 
     @Override
@@ -228,12 +248,25 @@ public class SubsMapHelper {
     }
   }
 
-  private static class RemoveRegistrationProcessor implements CacheEntryProcessor<String, Set<IgniteRegistrationInfo>, Void> {
+  private static class RemoveRegistrationProcessor implements CacheEntryProcessor<String, Set<IgniteRegistrationInfo>, Void>, Binarylizable {
     private static final long serialVersionUID = 1L;
-    private final IgniteRegistrationInfo info;
+    private IgniteRegistrationInfo info;
+
+    RemoveRegistrationProcessor() {
+    }
 
     RemoveRegistrationProcessor(IgniteRegistrationInfo info) {
       this.info = info;
+    }
+
+    @Override
+    public void writeBinary(BinaryWriter writer) throws BinaryObjectException {
+      writer.writeObject("info", info);
+    }
+
+    @Override
+    public void readBinary(BinaryReader reader) throws BinaryObjectException {
+      info = reader.readObject("info");
     }
 
     @Override
@@ -251,12 +284,25 @@ public class SubsMapHelper {
     }
   }
 
-  private static class RemoveNodeRegistrationsProcessor implements CacheEntryProcessor<String, Set<IgniteRegistrationInfo>, Void> {
+  private static class RemoveNodeRegistrationsProcessor implements CacheEntryProcessor<String, Set<IgniteRegistrationInfo>, Void>, Binarylizable {
     private static final long serialVersionUID = 1L;
-    private final String nodeId;
+    private String nodeId;
+
+    RemoveNodeRegistrationsProcessor() {
+    }
 
     RemoveNodeRegistrationsProcessor(String nodeId) {
       this.nodeId = nodeId;
+    }
+
+    @Override
+    public void writeBinary(BinaryWriter writer) throws BinaryObjectException {
+      writer.writeString("nodeId", nodeId);
+    }
+
+    @Override
+    public void readBinary(BinaryReader reader) throws BinaryObjectException {
+      nodeId = reader.readString("nodeId");
     }
 
     @Override
