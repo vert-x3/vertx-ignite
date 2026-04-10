@@ -29,6 +29,7 @@ import io.vertx.core.spi.cluster.*;
 import io.vertx.spi.cluster.ignite.impl.*;
 import io.vertx.spi.cluster.ignite.util.ConfigHelper;
 import org.apache.ignite.*;
+import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
@@ -448,6 +449,14 @@ public class IgniteClusterManager implements ClusterManager {
     cfg.setSegmentationPolicy(SegmentationPolicy.NOOP);
     cfg.setFailureHandler(new StopNodeFailureHandler());
     cfg.setAsyncContinuationExecutor(Runnable::run);
+
+    BinaryConfiguration binaryCfg = cfg.getBinaryConfiguration();
+    if (binaryCfg == null) {
+      binaryCfg = new BinaryConfiguration();
+    }
+    binaryCfg.setCompactFooter(false);
+    cfg.setBinaryConfiguration(binaryCfg);
+
     return cfg;
   }
 
