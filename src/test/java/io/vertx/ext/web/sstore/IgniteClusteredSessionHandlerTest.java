@@ -21,10 +21,15 @@ import io.vertx.LoggingTestWatcher;
 import io.vertx.core.Vertx;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.web.it.sstore.ClusteredSessionHandlerTest;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.spi.cluster.ignite.IgniteClusterManager;
 import org.junit.Rule;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.rules.TemporaryFolder;
 
+import java.nio.file.Path;
 import java.util.List;
 
 /**
@@ -32,21 +37,23 @@ import java.util.List;
  */
 public class IgniteClusteredSessionHandlerTest extends ClusteredSessionHandlerTest {
 
-  @Rule
-  public LoggingTestWatcher watchman = new LoggingTestWatcher();
+//  @Rule
+//  public LoggingTestWatcher watchman = new LoggingTestWatcher();
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  Path tmpDir;
 
+  @BeforeEach
   @Override
-  public void setUp() throws Exception {
-    System.setProperty("IGNITE_HOME", temporaryFolder.newFolder().getAbsolutePath());
-    super.setUp();
+  public void setUp(Vertx vertx, VertxTestContext testContext) throws Exception {
+    System.setProperty("IGNITE_HOME", tmpDir.toFile().getAbsolutePath());
+    super.setUp(vertx, testContext);
   }
 
+  @AfterEach
   @Override
-  public void tearDown() throws Exception {
-    super.tearDown();
+  public void tearDown(VertxTestContext testContext) throws Exception {
+    super.tearDown(testContext);
     System.clearProperty("IGNITE_HOME");
   }
 
