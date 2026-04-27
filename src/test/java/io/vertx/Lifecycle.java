@@ -20,7 +20,6 @@ import io.vertx.core.internal.logging.Logger;
 import io.vertx.core.internal.logging.LoggerFactory;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.binary.BinaryEnumCache;
 import org.apache.ignite.internal.util.GridClassLoaderCache;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.G;
@@ -71,7 +70,6 @@ public class Lifecycle {
     GridClassLoaderCache.clear();
     U.clearClassCache();
     MarshallerExclusions.clearCache();
-    BinaryEnumCache.clear();
   }
 
   private static void stopGrid(String igniteInstanceName) {
