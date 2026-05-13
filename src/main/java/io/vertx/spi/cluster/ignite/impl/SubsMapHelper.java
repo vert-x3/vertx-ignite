@@ -32,6 +32,7 @@ import org.apache.ignite.binary.BinaryWriter;
 import org.apache.ignite.binary.Binarylizable;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cache.query.ContinuousQuery;
+import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
 
 import javax.cache.Cache;
@@ -54,6 +55,7 @@ public class SubsMapHelper {
   private final RegistrationListener registrationListener;
   private final ConcurrentMap<String, Set<RegistrationInfo>> localSubs = new ConcurrentHashMap<>();
   private final Throttling throttling;
+  private final QueryCursor<Cache.Entry<String, Set<IgniteRegistrationInfo>>> continuousQuery;
   private volatile boolean shutdown;
 
   public SubsMapHelper(Ignite ignite, RegistrationListener registrationListener, VertxInternal vertxInternal) {
@@ -61,7 +63,7 @@ public class SubsMapHelper {
     this.registrationListener = registrationListener;
     throttling = new Throttling(vertxInternal, a -> getAndUpdate(a, vertxInternal));
     shutdown = false;
-    map.query(new ContinuousQuery<String, Set<IgniteRegistrationInfo>>()
+    continuousQuery = map.query(new ContinuousQuery<String, Set<IgniteRegistrationInfo>>()
             .setAutoUnsubscribe(true)
             .setTimeInterval(100L)
             .setPageSize(128)
@@ -167,13 +169,25 @@ public class SubsMapHelper {
 
   public void leave() {
     shutdown = true;
+    try {
+      continuousQuery.close();
+    } catch (Exception e) {
+      log.debug("Failed to close continuous query cursor: " + e.getMessage());
+    }
+    localSubs.clear();
   }
 
   private void fireRegistrationUpdateEvent(String address) {
+    if (shutdown) {
+      return;
+    }
     throttling.onEvent(address);
   }
 
   private Future<List<RegistrationInfo>> getAndUpdate(String address, VertxInternal vertxInternal) {
+    if (shutdown) {
+      return Future.succeededFuture();
+    }
     Promise<List<RegistrationInfo>> prom = Promise.promise();
     if (registrationListener.wantsUpdatesFor(address)) {
       prom.future().onSuccess(registrationInfos -> {
@@ -189,6 +203,9 @@ public class SubsMapHelper {
   }
 
   private void listen(final Iterable<CacheEntryEvent<? extends String, ? extends Set<IgniteRegistrationInfo>>> events, final VertxInternal vertxInternal) {
+    if (shutdown) {
+      return;
+    }
     vertxInternal.executeBlocking(() -> {
       StreamSupport.stream(events.spliterator(), false)
               .map(Cache.Entry::getKey)
