@@ -16,6 +16,8 @@
 package io.vertx.spi.cluster.ignite.impl;
 
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.shareddata.ClusterSerializable;
 
 import java.util.Arrays;
@@ -28,6 +30,42 @@ import java.util.Objects;
  */
 public class ClusterSerializationUtils {
 
+  private static class JsonObjectClusterSerializable implements ClusterSerializable {
+    private JsonObject delegate;
+    JsonObjectClusterSerializable(JsonObject jsonObject) {
+      this.delegate = jsonObject;
+    }
+    public JsonObjectClusterSerializable() {
+      this.delegate = new JsonObject();
+    }
+    @Override
+    public void writeToBuffer(Buffer buffer) {
+      delegate.writeToBuffer(buffer);
+    }
+    @Override
+    public int readFromBuffer(int pos, Buffer buffer) {
+      return delegate.readFromBuffer(pos, buffer);
+    }
+  }
+
+  private static class JsonArrayClusterSerializable implements ClusterSerializable {
+    private JsonArray delegate;
+    JsonArrayClusterSerializable(JsonArray jsonObject) {
+      this.delegate = jsonObject;
+    }
+    JsonArrayClusterSerializable() {
+      this.delegate = new JsonArray();
+    }
+    @Override
+    public void writeToBuffer(Buffer buffer) {
+      delegate.writeToBuffer(buffer);
+    }
+    @Override
+    public int readFromBuffer(int pos, Buffer buffer) {
+      return delegate.readFromBuffer(pos, buffer);
+    }
+  }
+
   /**
    * Serializes and wraps to {@link ClusterSerializableValue} given object if it implements
    * {@link ClusterSerializable} interface, otherwise returns source value.
@@ -37,6 +75,11 @@ public class ClusterSerializationUtils {
    * {@link ClusterSerializable} interface, otherwise passed object itself.
    */
   public static <T> T marshal(T obj) {
+    if (obj instanceof JsonObject) {
+      obj = (T)new JsonObjectClusterSerializable((JsonObject) obj);
+    } else if (obj instanceof JsonArray) {
+      obj = (T)new JsonArrayClusterSerializable((JsonArray) obj);
+    }
     if (obj instanceof ClusterSerializable) {
       return (T) marshal0((ClusterSerializable) obj);
     } else {
@@ -52,7 +95,14 @@ public class ClusterSerializationUtils {
    */
   public static <T> T unmarshal(T obj) {
     if (obj instanceof ClusterSerializableValue) {
-      return (T) unmarshal0((ClusterSerializableValue) obj);
+      ClusterSerializable cs = unmarshal0((ClusterSerializableValue) obj);
+      if (cs instanceof JsonObjectClusterSerializable) {
+        return (T)((JsonObjectClusterSerializable)cs).delegate;
+      } else if (cs instanceof JsonArrayClusterSerializable) {
+        return (T)((JsonArrayClusterSerializable)cs).delegate;
+      } else{
+        return (T) cs;
+      }
     } else {
       return obj;
     }
