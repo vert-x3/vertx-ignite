@@ -35,6 +35,7 @@ import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.*;
 public class IgniteOptions {
   private String localHost;
   private int localPort;
+  private int localPortRange;
   private int connectionsPerNode;
   private long connectTimeout;
   private long idleConnectionTimeout;
@@ -63,6 +64,7 @@ public class IgniteOptions {
    */
   public IgniteOptions() {
     localPort = DFLT_PORT;
+    localPortRange = DFLT_PORT_RANGE;
     connectionsPerNode = DFLT_CONN_PER_NODE;
     connectTimeout = DFLT_CONN_TIMEOUT;
     idleConnectionTimeout = DFLT_IDLE_CONN_TIMEOUT;
@@ -94,6 +96,7 @@ public class IgniteOptions {
   public IgniteOptions(IgniteOptions options) {
     this.localHost = options.localHost;
     this.localPort = options.localPort;
+    this.localPortRange = options.localPortRange;
     this.connectionsPerNode = options.connectionsPerNode;
     this.connectTimeout = options.connectTimeout;
     this.idleConnectionTimeout = options.idleConnectionTimeout;
@@ -167,6 +170,28 @@ public class IgniteOptions {
    */
   public IgniteOptions setLocalPort(int localPort) {
     this.localPort = localPort;
+    return this;
+  }
+
+  /**
+   * See {@link #setLocalPortRange(int)}.
+   *
+   * @return Number of ports to try.
+   */
+  public int getLocalPortRange() {
+    return localPortRange;
+  }
+
+  /**
+   * Sets the local port range for the communication SPI: the number of ports, starting at
+   * {@link #setLocalPort(int)}, Ignite may bind. Defaults to {@code TcpCommunicationSpi.DFLT_PORT_RANGE}.
+   * See {@code TcpCommunicationSpi#setLocalPortRange(int)}.
+   *
+   * @param localPortRange Number of ports to try.
+   * @return reference to this, for fluency
+   */
+  public IgniteOptions setLocalPortRange(int localPortRange) {
+    this.localPortRange = localPortRange;
     return this;
   }
 

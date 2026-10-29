@@ -27,6 +27,7 @@ public class IgniteOptionsTest {
     IgniteOptions options = new IgniteOptions();
     assertNull(options.getLocalHost());
     assertEquals(DFLT_PORT, options.getLocalPort());
+    assertEquals(DFLT_PORT_RANGE, options.getLocalPortRange());
     assertEquals(DFLT_CONN_PER_NODE, options.getConnectionsPerNode());
     assertEquals(DFLT_CONN_TIMEOUT, options.getConnectTimeout());
     assertEquals(DFLT_IDLE_CONN_TIMEOUT, options.getIdleConnectionTimeout());
@@ -57,6 +58,7 @@ public class IgniteOptionsTest {
     IgniteOptions options = new IgniteOptions(new JsonObject());
     assertNull(options.getLocalHost());
     assertEquals(DFLT_PORT, options.getLocalPort());
+    assertEquals(DFLT_PORT_RANGE, options.getLocalPortRange());
     assertEquals(DFLT_CONN_PER_NODE, options.getConnectionsPerNode());
     assertEquals(DFLT_CONN_TIMEOUT, options.getConnectTimeout());
     assertEquals(DFLT_IDLE_CONN_TIMEOUT, options.getIdleConnectionTimeout());
@@ -86,6 +88,7 @@ public class IgniteOptionsTest {
     assertEquals(options.getLocalHost(), config.getLocalHost());
     assertEquals("TcpCommunicationSpi", config.getCommunicationSpi().getClass().getSimpleName());
     assertEquals(options.getLocalPort(), ((TcpCommunicationSpi) config.getCommunicationSpi()).getLocalPort());
+    assertEquals(options.getLocalPortRange(), ((TcpCommunicationSpi) config.getCommunicationSpi()).getLocalPortRange());
     assertEquals(options.getConnectionsPerNode(), ((TcpCommunicationSpi) config.getCommunicationSpi()).getConnectionsPerNode());
     assertEquals(options.getConnectTimeout(), ((TcpCommunicationSpi) config.getCommunicationSpi()).getConnectTimeout());
     assertEquals(options.getIdleConnectionTimeout(), ((TcpCommunicationSpi) config.getCommunicationSpi()).getIdleConnectionTimeout());
@@ -136,6 +139,7 @@ public class IgniteOptionsTest {
     return new IgniteOptions()
       .setLocalHost("localHost")
       .setLocalPort(12345)
+      .setLocalPortRange(0)
       .setConnectionsPerNode(2)
       .setConnectTimeout(2000L)
       .setIdleConnectionTimeout(300_000L)
@@ -218,6 +222,7 @@ public class IgniteOptionsTest {
   private void checkJson(IgniteOptions options, JsonObject json) {
     assertEquals(options.getLocalHost(), json.getString("localHost"));
     assertEquals(options.getLocalPort(), json.getInteger("localPort").intValue());
+    assertEquals(options.getLocalPortRange(), json.getInteger("localPortRange").intValue());
     assertEquals(options.getConnectionsPerNode(), json.getInteger("connectionsPerNode").intValue());
     assertEquals(options.getConnectTimeout(), json.getLong("connectTimeout").longValue());
     assertEquals(options.getIdleConnectionTimeout(), json.getLong("idleConnectionTimeout").longValue());
@@ -288,6 +293,7 @@ public class IgniteOptionsTest {
     "  \"idleConnectionTimeout\": 300000,\n" +
     "  \"localHost\": \"localHost\",\n" +
     "  \"localPort\": 12345,\n" +
+    "  \"localPortRange\": 0,\n" +
     "  \"maxConnectTimeout\": 200000,\n" +
     "  \"metricsLogFrequency\": 10,\n" +
     "  \"reconnectCount\": 20,\n" +
