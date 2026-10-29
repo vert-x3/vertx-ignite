@@ -326,5 +326,14 @@ Add VM options:
 --add-opens=java.base/java.nio=ALL-UNNAMED 
 --add-opens=java.base/java.util=ALL-UNNAMED 
 --add-opens=java.base/java.lang.invoke=ALL-UNNAMED 
---add-opens=java.base/java.lang=ALL-UNNAMED
+--add-opens=java.base/java.lang=ALL-UNNAMED 
+--add-opens=java.base/sun.nio.ch=ALL-UNNAMED
 ----
+
+`--add-opens=java.base/sun.nio.ch=ALL-UNNAMED` lets Ignite install its optimized selected-key set
+(`GridNioServer.createSelector()`); without it Ignite silently falls back to a selector loop that does not
+close a failing session, so a connection that keeps failing busy-spins a communication worker.
+
+On JDK 25 and later, that optimization reflectively mutates final fields (JEP 500). This currently prints a
+warning; once `--illegal-final-field-mutation=deny` becomes the default you also need
+`--enable-final-field-mutation=ALL-UNNAMED` (that option does not exist before JDK 25).
