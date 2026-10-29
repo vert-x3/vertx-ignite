@@ -45,6 +45,7 @@ public class IgniteOptions {
   private List<IgniteCacheOptions> cacheConfiguration;
   private IgniteSslOptions sslOptions;
   private boolean shutdownOnSegmentation;
+  private boolean clientConnectorEnabled;
   private int pageSize;
   private long defaultRegionInitialSize;
   private long defaultRegionMaxSize;
@@ -72,6 +73,7 @@ public class IgniteOptions {
     discoveryOptions = new IgniteDiscoveryOptions();
     cacheConfiguration = new ArrayList<>();
     shutdownOnSegmentation = true;
+    clientConnectorEnabled = false;
     pageSize = DFLT_PAGE_SIZE;
     defaultRegionInitialSize = DFLT_DATA_REGION_INITIAL_SIZE;
     defaultRegionMaxSize = DFLT_DATA_REGION_MAX_SIZE;
@@ -104,6 +106,7 @@ public class IgniteOptions {
     this.cacheConfiguration = options.cacheConfiguration;
     this.sslOptions = options.sslOptions;
     this.shutdownOnSegmentation = options.shutdownOnSegmentation;
+    this.clientConnectorEnabled = options.clientConnectorEnabled;
     this.pageSize = options.pageSize;
     this.defaultRegionInitialSize = options.defaultRegionInitialSize;
     this.defaultRegionMaxSize = options.defaultRegionMaxSize;
@@ -366,6 +369,23 @@ public class IgniteOptions {
    */
   public IgniteOptions setShutdownOnSegmentation(boolean shutdownOnSegmentation) {
     this.shutdownOnSegmentation = shutdownOnSegmentation;
+    return this;
+  }
+
+  public boolean isClientConnectorEnabled() {
+    return clientConnectorEnabled;
+  }
+
+  /**
+   * Enables Ignite's client connector ({@code ClientConnectorConfiguration}) and REST connector
+   * ({@code ConnectorConfiguration}). Not relevant to Vert.x clustering, which uses neither. Defaults to
+   * {@code false}; set to {@code true} to run them.
+   *
+   * @param clientConnectorEnabled boolean flag.
+   * @return reference to this, for fluency
+   */
+  public IgniteOptions setClientConnectorEnabled(boolean clientConnectorEnabled) {
+    this.clientConnectorEnabled = clientConnectorEnabled;
     return this;
   }
 
