@@ -120,6 +120,7 @@ public class ConfigHelper {
       .setCommunicationSpi(
         new TcpCommunicationSpi()
           .setLocalPort(options.getLocalPort())
+          .setLocalPortRange(options.getLocalPortRange())
           .setConnectionsPerNode(options.getConnectionsPerNode())
           .setConnectTimeout(options.getConnectTimeout())
           .setIdleConnectionTimeout(options.getIdleConnectionTimeout())
