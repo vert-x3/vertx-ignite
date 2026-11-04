@@ -39,6 +39,7 @@ public class IgniteOptionsTest {
     assertEquals(0, options.getCacheConfiguration().size());
     assertNull(options.getSslContextFactory());
     assertTrue(options.isShutdownOnSegmentation());
+    assertFalse(options.isClientConnectorEnabled());
     assertEquals(DFLT_PAGE_SIZE, options.getPageSize());
     assertEquals(DFLT_DATA_REGION_INITIAL_SIZE, options.getDefaultRegionInitialSize());
     assertEquals(DFLT_DATA_REGION_MAX_SIZE, options.getDefaultRegionMaxSize());
@@ -50,6 +51,20 @@ public class IgniteOptionsTest {
     assertEquals(DFLT_METRICS_HISTORY_SIZE, options.getMetricsHistorySize());
     assertEquals(DFLT_METRICS_EXPIRE_TIME, options.getMetricsExpireTime());
     assertNotNull(options.getMetricExporterSpi());
+  }
+
+  @Test
+  public void clientConnectorsDisabledByDefault() {
+    IgniteConfiguration config = ConfigHelper.toIgniteConfig(Vertx.vertx(), new IgniteOptions());
+    assertNull(config.getClientConnectorConfiguration());
+    assertNull(config.getConnectorConfiguration());
+  }
+
+  @Test
+  public void clientConnectorsEnabledWhenRequested() {
+    IgniteConfiguration config = ConfigHelper.toIgniteConfig(Vertx.vertx(), new IgniteOptions().setClientConnectorEnabled(true));
+    assertNotNull(config.getClientConnectorConfiguration());
+    assertNotNull(config.getConnectorConfiguration());
   }
 
   @Test
@@ -69,6 +84,7 @@ public class IgniteOptionsTest {
     assertEquals(0, options.getCacheConfiguration().size());
     assertNull(options.getSslContextFactory());
     assertTrue(options.isShutdownOnSegmentation());
+    assertFalse(options.isClientConnectorEnabled());
     assertEquals(DFLT_PAGE_SIZE, options.getPageSize());
     assertEquals(DFLT_DATA_REGION_INITIAL_SIZE, options.getDefaultRegionInitialSize());
     assertEquals(DFLT_DATA_REGION_MAX_SIZE, options.getDefaultRegionMaxSize());
@@ -191,6 +207,7 @@ public class IgniteOptionsTest {
       .setDefaultRegionMaxSize(100L * 1024 * 1024)
       .setDefaultRegionMetricsEnabled(true)
       .setShutdownOnSegmentation(false)
+      .setClientConnectorEnabled(true)
       .setShutdownOnNodeStop(true)
       .setDelayAfterStart(200L)
       .setMetricsUpdateFrequency(10_000L)
@@ -225,6 +242,7 @@ public class IgniteOptionsTest {
     assertEquals(options.getReconnectCount(), json.getInteger("reconnectCount").intValue());
     assertEquals(options.getMetricsLogFrequency(), json.getLong("metricsLogFrequency").longValue());
     assertEquals(options.isShutdownOnSegmentation(), json.getBoolean("shutdownOnSegmentation"));
+    assertEquals(options.isClientConnectorEnabled(), json.getBoolean("clientConnectorEnabled"));
     assertEquals(options.isShutdownOnNodeStop(), json.getBoolean("shutdownOnNodeStop"));
     assertEquals(options.getDelayAfterStart(), json.getLong("delayAfterStart").longValue());
     assertEquals(options.getDiscoverySpi().getType(), json.getJsonObject("discoverySpi").getString("type"));
@@ -292,6 +310,7 @@ public class IgniteOptionsTest {
     "  \"metricsLogFrequency\": 10,\n" +
     "  \"reconnectCount\": 20,\n" +
     "  \"shutdownOnSegmentation\": true,\n" +
+    "  \"clientConnectorEnabled\": true,\n" +
     "  \"shutdownOnNodeStop\": false, \n" +
     "  \"delayAfterStart\": 100, \n" +
     "  \"discoverySpi\": {\n" +
