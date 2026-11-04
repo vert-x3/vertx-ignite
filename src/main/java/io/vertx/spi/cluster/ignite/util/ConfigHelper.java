@@ -115,6 +115,12 @@ public class ConfigHelper {
   public static IgniteConfiguration toIgniteConfig(Vertx vertx, IgniteOptions options) {
     IgniteConfiguration configuration = new IgniteConfiguration();
 
+    if (!options.isClientConnectorEnabled()) {
+      configuration
+        .setClientConnectorConfiguration(null)
+        .setConnectorConfiguration(null);
+    }
+
     configuration
       .setLocalHost(options.getLocalHost())
       .setCommunicationSpi(
