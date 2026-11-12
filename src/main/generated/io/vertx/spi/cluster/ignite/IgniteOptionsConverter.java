@@ -22,6 +22,11 @@ public class IgniteOptionsConverter {
             obj.setLocalPort(((Number)member.getValue()).intValue());
           }
           break;
+        case "localPortRange":
+          if (member.getValue() instanceof Number) {
+            obj.setLocalPortRange(((Number)member.getValue()).intValue());
+          }
+          break;
         case "connectionsPerNode":
           if (member.getValue() instanceof Number) {
             obj.setConnectionsPerNode(((Number)member.getValue()).intValue());
@@ -150,6 +155,7 @@ public class IgniteOptionsConverter {
       json.put("localHost", obj.getLocalHost());
     }
     json.put("localPort", obj.getLocalPort());
+    json.put("localPortRange", obj.getLocalPortRange());
     json.put("connectionsPerNode", obj.getConnectionsPerNode());
     json.put("connectTimeout", obj.getConnectTimeout());
     json.put("idleConnectionTimeout", obj.getIdleConnectionTimeout());
