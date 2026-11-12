@@ -82,6 +82,11 @@ public class IgniteOptionsConverter {
             obj.setShutdownOnSegmentation((Boolean)member.getValue());
           }
           break;
+        case "clientConnectorEnabled":
+          if (member.getValue() instanceof Boolean) {
+            obj.setClientConnectorEnabled((Boolean)member.getValue());
+          }
+          break;
         case "pageSize":
           if (member.getValue() instanceof Number) {
             obj.setPageSize(((Number)member.getValue()).intValue());
@@ -174,6 +179,7 @@ public class IgniteOptionsConverter {
       json.put("sslContextFactory", obj.getSslContextFactory().toJson());
     }
     json.put("shutdownOnSegmentation", obj.isShutdownOnSegmentation());
+    json.put("clientConnectorEnabled", obj.isClientConnectorEnabled());
     json.put("pageSize", obj.getPageSize());
     json.put("defaultRegionInitialSize", obj.getDefaultRegionInitialSize());
     json.put("defaultRegionMaxSize", obj.getDefaultRegionMaxSize());
