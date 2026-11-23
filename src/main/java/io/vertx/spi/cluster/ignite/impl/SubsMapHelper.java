@@ -177,6 +177,15 @@ public class SubsMapHelper {
     localSubs.clear();
   }
 
+  /**
+   * Like {@link #leave()} without closing the continuous query cursor: for a node that is about to be stopped (the
+   * stop ends the query) or that is segmented (the close would wait for a discovery acknowledgement forever).
+   */
+  public void shutdown() {
+    shutdown = true;
+    localSubs.clear();
+  }
+
   private void fireRegistrationUpdateEvent(String address) {
     if (shutdown) {
       return;
