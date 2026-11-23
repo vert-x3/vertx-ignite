@@ -94,6 +94,7 @@ public class IgniteClusterManager implements ClusterManager {
   private boolean customIgnite;
   private boolean shutdownOnSegmentation;
   private boolean shutdownOnNodeStop;
+  private volatile boolean segmented;
   private long delayAfterStart;
 
   private String nodeId;
@@ -307,6 +308,9 @@ public class IgniteClusterManager implements ClusterManager {
           nodeId = nodeId(ignite.cluster().localNode());
 
           eventListener = event -> {
+            if (event.type() == EVT_NODE_SEGMENTED) {
+              segmented = true;
+            }
             if (!isActive()) {
               return false;
             }
@@ -364,7 +368,12 @@ public class IgniteClusterManager implements ClusterManager {
             if (eventListener != null) {
               ignite.events().stopLocalListen(eventListener, IGNITE_EVENTS);
             }
-            subsMapHelper.leave();
+            if (customIgnite && !segmented) {
+              subsMapHelper.leave();
+            } else {
+              // stopping the node ends the continuous query; on a segmented node closing the cursor never returns
+              subsMapHelper.shutdown();
+            }
             if (!customIgnite) {
               ignite.close();
             }
